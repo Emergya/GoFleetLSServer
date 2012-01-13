@@ -77,59 +77,6 @@ def hba_stepcost(row):
 #Candidates to be the next node
 #The function returns edges
 def hba_adj(cat, source, target, p, tablename='routing', col_geom='geom', col_edge='id', col_cost='cost', col_source='source', col_target='target', col_revc='reverse_cost', col_cat='category', col_name='name', col_rule='rule'):
-  if adj_plan == -1:
-    global adj_plan
-    global adj_plan_rev
-    adj_plan_rev = plpy.prepare('\n\
-    select a.*, st_distance_sphere(st_startpoint(a.geom), b.geom) + a.length * ' + str(heuristic_constant) + ' * (a.category + 1) as heuristic from ((select  \n\
-        ' + col_geom + ' as geom, \n\
-        ' + col_edge + ' as id, \n\
-        ' + col_cost + ' as cost,\n\
-        st_distance_sphere(st_startpoint(' + col_geom + '), st_endpoint(' + col_geom + ')) as length,\n\
-        ' + col_target + ' as source, \n\
-        ' + col_source + ' as target, \n\
-        ' + col_cat + ' as category, \n\
-        ' + col_name + ' as name from ' + tablename + '\n\
-        ) union all (select  \n\
-        st_reverse(' + col_geom + ') as geom, \n\
-        ' + col_edge + ' as id, \n\
-        ' + col_revc + ' as cost, \n\
-        st_distance_sphere(st_startpoint(' + col_geom + '), st_endpoint(' + col_geom + ')) as length,\n\
-        ' + col_source + ' as source,\n\
-        ' + col_target + ' as target, \n\
-        ' + col_cat + ' as category, \n\
-        ' + col_name + ' as name from ' + tablename + ' )\n\
-        ) a, (select st_startpoint(' + col_geom + ')  as geom from ' + tablename + ' where ' + col_source + ' = $3 or ' + col_target + ' = $3 limit 1) b \n\
-                where source = $1 and category >= 0\n\
-                and cost <> \'Infinity\''
-             #Turn restrictions:
-        + 'and ' + col_edge + ' not in (SELECT ' + col_rule + ' from ' + tablename + ' r where r.' + col_edge + ' = $2 and ' + col_rule + ' is not null)'
-       , ['Integer', 'Integer', 'Integer'])
-    adj_plan = plpy.prepare('\n\
-    select a.*, st_distance_sphere(st_startpoint(a.geom), b.geom) + a.length * ' + str(heuristic_constant) + ' * (a.category + 1) as heuristic from ((select  \n\
-	st_reverse(' + col_geom + ') as geom, \n\
-	' + col_edge + ' as id, \n\
-	' + col_revc + ' as cost,\n\
-        st_distance_sphere(st_startpoint(' + col_geom + '), st_endpoint(' + col_geom + ')) as length,\n\
-	' + col_target + ' as source, \n\
-	' + col_source + ' as target, \n\
-	' + col_cat + ' as category, \n\
-	' + col_name + ' as name from ' + tablename + '\n\
-	) union all (select  \n\
-	' + col_geom + ' as geom, \n\
-	' + col_edge + ' as id, \n\
-	' + col_cost + ' as cost, \n\
-        st_distance_sphere(st_startpoint(' + col_geom + '), st_endpoint(' + col_geom + ')) as length,\n\
-	' + col_source + ' as source,\n\
-	' + col_target + ' as target, \n\
-	' + col_cat + ' as category, \n\
-	' + col_name + ' as name from ' + tablename + ' )\n\
-	) a, (select st_startpoint(' + col_geom + ')  as geom from ' + tablename + ' where ' + col_source + ' = $3 or ' + col_target + ' = $3 limit 1) b \n\
-		where source = $1 and category >= 0\n\
-		and cost <> \'Infinity\''
-             #Turn restrictions:
-	+ 'and ' + col_edge + ' not in (SELECT ' + col_rule + ' from ' + tablename + ' r where r.' + col_edge + ' = $2 and ' + col_rule + ' is not null)'
-       , ['Integer', 'Integer', 'Integer'])
   try:
     last_id = int(p[int(source)][1]['id'])
   except:
@@ -145,73 +92,15 @@ def hba_adj(cat, source, target, p, tablename='routing', col_geom='geom', col_ed
 #Candidates to be the next node WITHOUT checking category
 #The function returns edges
 def hba_adj_buffer(source, target, p, tablename='routing', col_geom='geom', col_edge='id', col_cost='cost', col_source='source', col_target='target', col_revc='reverse_cost', col_cat='category', col_name='name', col_rule='rule'):
-  if adj_plan == -1:
-    global adj_plan
-    global adj_plan_rev
-    adj_plan_rev = plpy.prepare('\n\
-    select a.*, st_distance_sphere(st_startpoint(a.geom), b.geom) + a.length * ' + str(heuristic_constant) + ' as heuristic from ((select  \n\
-        ' + col_geom + ' as geom, \n\
-        ' + col_edge + ' as id, \n\
-        ' + col_revc + ' as cost,\n\
-        st_distance_sphere(st_startpoint(' + col_geom + '), st_endpoint(' + col_geom + ')) as length,\n\
-        ' + col_target + ' as source, \n\
-        ' + col_source + ' as target, \n\
-        ' + col_cat + ' as category, \n\
-        ' + col_name + ' as name from ' + tablename + '\n\
-        ) union all (select  \n\
-        st_reverse(' + col_geom + ') as geom, \n\
-        ' + col_edge + ' as id, \n\
-        ' + col_cost + ' as cost, \n\
-        st_distance_sphere(st_startpoint(' + col_geom + '), st_endpoint(' + col_geom + ')) as length,\n\
-        ' + col_source + ' as source,\n\
-        ' + col_target + ' as target, \n\
-        ' + col_cat + ' as category, \n\
-        ' + col_name + ' as name from ' + tablename + ' )\n\
-        ) a, (select st_startpoint(' + col_geom + ')  as geom from ' + tablename + ' where ' + col_source + ' = $3 or ' + col_target + ' = $3 limit 1) b \n\
-                where source = $1\n\
-                and cost <> \'Infinity\''
-             #Turn restrictions:
-        + 'and ' + col_edge + ' not in (SELECT ' + col_rule + ' from ' + tablename + ' r where r.' + col_edge + ' = $2 and ' + col_rule + ' is not null)'
-       , ['Integer', 'Integer', 'Integer'])
-    adj_plan = plpy.prepare('\n\
-    select a.*, st_distance_sphere(st_startpoint(a.geom), b.geom) + a.length * ' + str(heuristic_constant) + ' as heuristic from ((select  \n\
-	st_reverse(' + col_geom + ') as geom, \n\
-	' + col_edge + ' as id, \n\
-	' + col_revc + ' as cost,\n\
-        st_distance_sphere(st_startpoint(' + col_geom + '), st_endpoint(' + col_geom + ')) as length,\n\
-	' + col_target + ' as source, \n\
-	' + col_source + ' as target, \n\
-	' + col_cat + ' as category, \n\
-	' + col_name + ' as name from ' + tablename + '\n\
-	) union all (select  \n\
-	' + col_geom + ' as geom, \n\
-	' + col_edge + ' as id, \n\
-	' + col_cost + ' as cost, \n\
-        st_distance_sphere(st_startpoint(' + col_geom + '), st_endpoint(' + col_geom + ')) as length,\n\
-	' + col_source + ' as source,\n\
-	' + col_target + ' as target, \n\
-	' + col_cat + ' as category, \n\
-	' + col_name + ' as name from ' + tablename + ' )\n\
-	) a, (select st_startpoint(' + col_geom + ')  as geom from ' + tablename + ' where ' + col_source + ' = $3 or ' + col_target + ' = $3 limit 1) b \n\
-		where source = $1\n\
-		and cost <> \'Infinity\''
-             #Turn restrictions:
-	+ 'and ' + col_edge + ' not in (SELECT ' + col_rule + ' from ' + tablename + ' r where r.' + col_edge + ' = $2 and ' + col_rule + ' is not null)'
-       , ['Integer', 'Integer', 'Integer'])
   try:
     last_id = int(p[int(source)][1]['id'])
   except:
     last_id = -1
  
-#  plpy.info([source, last_id, target])
   if "source" in col_source:
     return plpy.execute(adj_plan, [source, last_id, target])
   else:
     return plpy.execute(adj_plan_rev, [source, last_id, target])
-
-
-
-
 
 def hba_bestNext(ol):
   cost_tmp = float('inf')
@@ -230,7 +119,7 @@ def hba_process_y(adj, p, cat, d, ol, cl, x, target, vertex_tablename, col_verte
   cat = cat_array
 #  plpy.info("Salimos del hba_process_y con ", cat[0])
   if len(already_processed) == 0 and len(adj) > 0:
-   plpy.info("Bajando nivel desde ", cat[0])
+#   plpy.info("Bajando nivel desde ", cat[0])
    cat[0] = 10 
    hba_process_y(adj, p, cat, d, ol, cl, x, target, vertex_tablename, col_vertex_geom, col_edge, already_processed, distance)
 
@@ -287,12 +176,12 @@ def hba_astar(source, target, ol, cl, cl2, cat, d, p, tablename='routing', col_g
             ' + 'SELECT st_distance_sphere(v1.geom, v2.geom) as dist from vertex v1, vertex v2 where v1.id = $1 and v2.id = $2',
         ['Integer', 'Integer'])
     distance =plpy.execute(distance_plan, [source, x])[0]["dist"]
-    plpy.info("Distance from origin=" + str(distance)) 
+#    plpy.info("Distance from origin=" + str(distance)) 
     if (distance <= distance_buffer):
-      plpy.info("Using hba_adj_buffer")
+#      plpy.info("Using hba_adj_buffer")
       adj = hba_adj_buffer(x, target, p,tablename, col_geom, col_edge, col_cost, col_source, col_target, col_revc, col_cat, col_name, col_rule)
     else:
-      plpy.info("Using hba_adj")
+#      plpy.info("Using hba_adj")
       adj = hba_adj(cat, x, target, p,tablename, col_geom, col_edge, col_cost, col_source, col_target, col_revc, col_cat, col_name, col_rule)
     #plpy.info("Obtained adjacents for node " + str(x) + " with category cat >= " + str(cat) + ". " + str(adj.nrows()) + " nodes.")
 
@@ -341,6 +230,62 @@ def hba_star_pl(source, target, tablename='routing', col_edge='id', col_cost='co
   olf[source] = d[source] + hba_heuristic(source, target, vertex_tablename, col_vertex_geom, col_edge)
   olb[target] = d[target] + hba_heuristic(target, source, vertex_tablename, col_vertex_geom, col_edge)
 
+  if adj_plan == -1:
+    global adj_plan
+    global adj_plan_rev
+
+    adj_plan_rev = plpy.prepare('\n\
+    select a.*, (st_distance_sphere(st_startpoint(a.geom), b.geom) + a.length) * ' + str(heuristic_constant) + ' * (a.category + 1) as heuristic from ((select  \n\
+        ' + col_geom + ' as geom, \n\
+        ' + col_edge + ' as id, \n\
+        ' + col_cost + ' as cost,\n\
+        st_distance_sphere(st_startpoint(' + col_geom + '), st_endpoint(' + col_geom + ')) as length,\n\
+        ' + col_target + ' as source, \n\
+        ' + col_source + ' as target, \n\
+        ' + col_cat + ' as category, \n\
+        ' + col_name + ' as name from ' + tablename + '\n\
+        ) union all (select  \n\
+        st_reverse(' + col_geom + ') as geom, \n\
+        ' + col_edge + ' as id, \n\
+        ' + col_revc + ' as cost, \n\
+        st_distance_sphere(st_startpoint(' + col_geom + '), st_endpoint(' + col_geom + ')) as length,\n\
+        ' + col_source + ' as source,\n\
+        ' + col_target + ' as target, \n\
+        ' + col_cat + ' as category, \n\
+        ' + col_name + ' as name from ' + tablename + ' )\n\
+        ) a, (select st_startpoint(' + col_geom + ')  as geom from ' + tablename + ' where ' + col_source + ' = $3 or ' + col_target + ' = $3 limit 1) b \n\
+                where source = $1 and category >= 0\n\
+                and cost <> \'Infinity\''
+             #Turn restrictions:
+        + 'and ' + col_edge + ' not in (SELECT ' + col_rule + ' from ' + tablename + ' r where r.' + col_edge + ' = $2 and ' + col_rule + ' is not null)'
+       , ['Integer', 'Integer', 'Integer'])
+
+    adj_plan = plpy.prepare('\n\
+    select a.*, (st_distance_sphere(st_startpoint(a.geom), b.geom) + a.length) * ' + str(heuristic_constant) + ' * (a.category + 1) as heuristic from ((select  \n\
+	st_reverse(' + col_geom + ') as geom, \n\
+	' + col_edge + ' as id, \n\
+	' + col_revc + ' as cost,\n\
+        st_distance_sphere(st_startpoint(' + col_geom + '), st_endpoint(' + col_geom + ')) as length,\n\
+	' + col_target + ' as source, \n\
+	' + col_source + ' as target, \n\
+	' + col_cat + ' as category, \n\
+	' + col_name + ' as name from ' + tablename + '\n\
+	) union all (select  \n\
+	' + col_geom + ' as geom, \n\
+	' + col_edge + ' as id, \n\
+	' + col_cost + ' as cost, \n\
+        st_distance_sphere(st_startpoint(' + col_geom + '), st_endpoint(' + col_geom + ')) as length,\n\
+	' + col_source + ' as source,\n\
+	' + col_target + ' as target, \n\
+	' + col_cat + ' as category, \n\
+	' + col_name + ' as name from ' + tablename + ' )\n\
+	) a, (select st_startpoint(' + col_geom + ')  as geom from ' + tablename + ' where ' + col_source + ' = $3 or ' + col_target + ' = $3 limit 1) b \n\
+		where source = $1 and category >= 0\n\
+		and cost <> \'Infinity\''
+             #Turn restrictions:
+	+ 'and ' + col_edge + ' not in (SELECT ' + col_rule + ' from ' + tablename + ' r where r.' + col_edge + ' = $2 and ' + col_rule + ' is not null)'
+       , ['Integer', 'Integer', 'Integer'])
+ 
   #Star two-sided A* search
 
   m = -1
@@ -360,8 +305,8 @@ def hba_star_pl(source, target, tablename='routing', col_edge='id', col_cost='co
 
   plpy.info("cl:", len(clf) + len(clb))
 
-  plpy.info(clf)
-  plpy.info(clb)
+#  plpy.info(clf)
+#  plpy.info(clb)
 
   if m == 0:
     plpy.info("No path found. Inferring path")
