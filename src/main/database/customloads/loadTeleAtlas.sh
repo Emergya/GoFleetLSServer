@@ -11,10 +11,10 @@ echo "Now, to important stuff:"
 
 #Configuration:
 #Customize the following variables with your own environment:
-DATABASE="gofleetls"
-USERNAME="gofleet"
+DATABASE="gofleetls-teleatlas"
+USERNAME="gofleetls"
 HOST="localhost"
-PORT="5432"
+PORT="5433"
 #This is the mininmum id from the network table. Used because low ids have better performance
 min_id=57240000233635 
 
@@ -25,6 +25,8 @@ PSQL="psql -U $USERNAME -h $HOST -p $PORT $DATABASE "
 
 echo "Preparing helper views"
 
+$PSQL -c "DROP VIEW routing_norestrictions_view CASCADE"
+$PSQL -c "DROP VIEW routing_restrictions_view CASCADE"
 $PSQL -c "CREATE OR REPLACE VIEW routing_restrictions_view AS 
  SELECT network.frc AS category, 
 	network.id - $min_id::bigint AS id,
@@ -60,7 +62,6 @@ $PSQL -c "CREATE OR REPLACE VIEW routing_restrictions_view AS
                   WHERE m.id = a.id AND m.feattyp = 2103 AND m.promantyp = 0
                   GROUP BY a.id) b) restrictions
   WHERE network.id::double precision = restrictions.source;"
-
 
 $PSQL -c "CREATE OR REPLACE VIEW routing_norestrictions_view AS 
  SELECT network.frc AS category, 
