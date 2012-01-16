@@ -70,3 +70,58 @@ $BODY$
   LANGUAGE plpythonu VOLATILE
   COST 1000
   ROWS 200;
+
+
+-- Function: gls_tsp(text, integer[], text, integer)
+DROP FUNCTION gls_tsp(text, integer[], text, integer);
+
+CREATE OR REPLACE FUNCTION gls_tsp(routingtable text, stoptable integer[], gid text, source integer)
+  RETURNS SETOF hba_res AS
+$BODY$
+  routingRes = []
+  source_ = source
+  
+  import sys
+  sys.path.insert(1, '/usr/share/gofleetls/')
+  import hba_star
+  
+  next_target_plan = plpy.prepare('SELECT t.target FROM ' + routingtable + ' s, ' 
+				+ '(select * from ((select id, routing.source as target, ' 
+				+ 'the_geom from ' + routingtable + ' as routing ' 
+				+ 'where routing.source = ANY($1::INT[]) ' 
+				+ 'and not routing.id = ANY($2::INT[])) ' 
+				+ 'union all (select id, routing.target, ' 
+				+ 'routing.the_geom from ' + routingtable + ' as routing  ' 
+				+ 'where routing.target = ANY($1::INT[]) ' 
+				+ 'and not routing.id = ANY($2::INT[]))) t_) t ' 
+				+ 'WHERE (s.source = $3 or s.target = $3) and $3 <> t.target ' 
+				+ 'order by st_distance(t.the_geom, s.the_geom) asc', 
+				['int[]', 'int[]', 'Integer'])
+
+  while not set(stoptable).issubset(set(routingRes)):
+    target = plpy.execute(next_target_plan, [stoptable, routingRes, source_], 1)
+    for target_ in target:
+      haspath = 0
+      
+      plpy.info(str(source_) + "=>" +  str(target_['target']))
+
+      res = hba_star.hba_star_pl(source_, target_['target'])
+
+      plpy.info("done")
+      
+      for r in res:
+        yield(str(r[0]), str(r[1]), str(r[2]), str(r[3]))
+        haspath = 1
+        
+      if haspath:
+        source_ = target_['target']
+      try:
+	stoptable.remove(target_['target'])
+      except:
+        plpy.info("Probable bug, we tried to remove " + str(target_['target']) + " from the stoptable")
+    
+$BODY$
+  LANGUAGE plpythonu IMMUTABLE
+  COST 5000
+  ROWS 200;
+

@@ -13,7 +13,7 @@ adj_plan = -1
 heuristic_constant=2
 central_node_plan = -1
 distance_plan = -1
-distance_buffer = 200
+distance_buffer = 300
 
 #The heuristic used by A* is the euclidean length
 def hba_heuristic(source, target, tablename='vertex', col_geom='geom', col_id='id'):
@@ -99,11 +99,11 @@ def hba_bestNext(ol):
   return x
 
 def hba_process_y(adj, p, cat, d, ol, cl, x, target, vertex_tablename, col_vertex_geom, col_edge, already_processed=[], distance='Infinity'):
-  cat[0] = cat[0] + 1
+  cat[0] = cat[0]# + 1
   categories = [hba_process_vertex(y, p, cat, d, ol, cl, x, target, vertex_tablename, col_vertex_geom, col_edge, already_processed, distance) for y in adj]
-  if len(already_processed) == 0 and len(adj) > 0  and cat[0] <= 4:
-   cat[0] = cat[0] + 2 
-   hba_process_y(adj, p, cat, d, ol, cl, x, target, vertex_tablename, col_vertex_geom, col_edge, already_processed, distance)
+#  if len(already_processed) == 0 and len(adj) > 0  and cat[0] <= 4:
+#   cat[0] = cat[0] + 2 
+#   hba_process_y(adj, p, cat, d, ol, cl, x, target, vertex_tablename, col_vertex_geom, col_edge, already_processed, distance)
 
 def hba_process_vertex(y, p, cat_array, d, ol, cl, x, target, vertex_tablename, col_vertex_geom, col_edge, already_processed, distance):
   cat = cat_array[0]
@@ -219,7 +219,7 @@ def hba_star_pl(source, target, tablename='routing', col_edge='id', col_cost='co
   global central_node_plan
   
   adj_plan_rev = plpy.prepare('select a.*, '
-	+ 'CASE WHEN a.name = $4 AND a.category <= 4 THEN \n\
+	+ 'CASE WHEN a.name = $4 AND a.category <= 3 THEN \n\
 		(a.length + st_distance_sphere(st_startpoint(a.geom), b.geom)) * (a.category + 1) \n\
 	WHEN a.name = b.name THEN \n\
                 a.length + st_distance_sphere(st_startpoint(a.geom), b.geom) \n\
@@ -253,7 +253,7 @@ def hba_star_pl(source, target, tablename='routing', col_edge='id', col_cost='co
 
   adj_plan = plpy.prepare('\n\
     select a.*,'
-        + 'CASE WHEN a.name = $4 AND a.category <= 4 THEN \n\
+        + 'CASE WHEN a.name = $4 AND a.category <= 3 THEN \n\
                 (a.length + st_distance_sphere(st_startpoint(a.geom), b.geom))  * (a.category + 1) \n\
         WHEN a.name = b.name THEN \n\
                 a.length + st_distance_sphere(st_startpoint(a.geom), b.geom) \n\
