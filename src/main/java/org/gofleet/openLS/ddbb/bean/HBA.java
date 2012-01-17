@@ -31,6 +31,7 @@ package org.gofleet.openLS.ddbb.bean;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.Table;
 
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -41,9 +42,10 @@ import org.hibernate.annotations.Type;
 import com.vividsolutions.jts.geom.Geometry;
 
 @Entity
+@Table(name = "hba", schema = "public")
 @Immutable
-@NamedNativeQuery(name = "tsp", resultClass = HBA.class, query = "select id, geom, name, cost from gls_tsp(:tablename, cast(ARRAY[:stoptable] as geometry[]), :gid, :start)", cacheable = true, readOnly = true)
-@Cache(usage = CacheConcurrencyStrategy.READ_ONLY)
+@NamedNativeQuery(name = "tsp", resultClass = HBA.class, query = "select id, geom, name, cost from gls_tsp(:tablename, cast(ARRAY[:stoptable] as geometry[]), :gid, :start)", cacheable = false, readOnly = true)
+@Cache(usage = CacheConcurrencyStrategy.NONE)
 public class HBA implements java.io.Serializable {
 	private static final long serialVersionUID = 3718703072510002908L;
 	@Id

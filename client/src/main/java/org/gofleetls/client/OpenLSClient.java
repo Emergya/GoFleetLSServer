@@ -27,14 +27,12 @@ package org.gofleetls.client;
  * This exception does not however invalidate any other reasons why the
  * executable file might be covered by the GNU General Public License.
  */
-import java.io.StringReader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.LinkedList;
 import java.util.List;
 
 import javax.ws.rs.core.MediaType;
-import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
@@ -64,6 +62,7 @@ import net.opengis.xls.v_1_2_0.WayPointType;
 import net.opengis.xls.v_1_2_0.XLSType;
 
 import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.GenericType;
 import com.sun.jersey.api.client.WebResource;
 import com.vividsolutions.jts.geom.Point;
 
@@ -99,21 +98,14 @@ public class OpenLSClient {
 				"http://www.opengis.net/xls", "xls"), XLSType.class, parameter);
 
 		WebResource resource = client.resource(url);
-		String response = resource.type(MediaType.APPLICATION_XML).post(
-				String.class, param);
 
-		StringReader sr = new StringReader(response);
+		GenericType<JAXBElement<XLSType>> xlsType = new GenericType<JAXBElement<XLSType>>() {
+		};
 
-		try {
-			if (UNMARSHALLER == null)
-				UNMARSHALLER = JAXBContext.newInstance(XLSType.class)
-						.createUnmarshaller();
+		JAXBElement<XLSType> response = resource
+				.type(MediaType.APPLICATION_XML).post(xlsType, param);
 
-			return ((JAXBElement<XLSType>) UNMARSHALLER.unmarshal(sr))
-					.getValue();
-		} catch (Throwable t) {
-			throw new RuntimeException(t);
-		}
+		return response.getValue();
 	}
 
 	/**
@@ -144,7 +136,7 @@ public class OpenLSClient {
 
 		JAXBElement<DetermineRouteRequestType> parameters = new JAXBElement<DetermineRouteRequestType>(
 				new QName("http://www.opengis.net/xls",
-						"DetermineRouteRequestType", ""),
+						"DetermineRouteRequest", ""),
 				DetermineRouteRequestType.class, parameter);
 
 		RequestType request = new RequestType();
@@ -273,7 +265,7 @@ public class OpenLSClient {
 		position.setPoint(p);
 
 		JAXBElement<PositionType> jaxb = new JAXBElement<PositionType>(
-				new QName("http://www.opengis.net/xls", "Request", ""),
+				new QName("http://www.opengis.net/xls", "Position", ""),
 				PositionType.class, position);
 		return jaxb;
 	}

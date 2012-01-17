@@ -1,34 +1,10 @@
 Manifest-Version: 1.0
-Created-By: Apache Maven
-Built-By: marias
-Build-Jdk: 1.6.0_26
-Class-Path: lib/axis2-1.6.1.jar lib/axis2-spring-1.6.1.jar lib/axis2-k
- ernel-1.6.1.jar lib/axiom-api-1.2.12.jar lib/geronimo-activation_1.1_
- spec-1.0.2.jar lib/geronimo-javamail_1.4_spec-1.6.jar lib/commons-log
- ging-1.1.1.jar lib/jaxen-1.1.1.jar lib/geronimo-stax-api_1.0_spec-1.0
- .1.jar lib/axiom-impl-1.2.12.jar lib/wstx-asl-3.2.9.jar lib/geronimo-
- ws-metadata_2.0_spec-1.1.2.jar lib/geronimo-jta_1.1_spec-1.1.jar lib/
- servlet-api-2.3.jar lib/commons-httpclient-3.1.jar lib/commons-codec-
- 1.2.jar lib/commons-fileupload-1.2.jar lib/wsdl4j-1.6.2.jar lib/XmlSc
- hema-1.4.7.jar lib/neethi-3.0.1.jar lib/woden-api-1.0M9.jar lib/woden
- -impl-dom-1.0M9.jar lib/woden-impl-commons-1.0M9.jar lib/jsr311-api-1
- .0.jar lib/spring-core-2.5.1.jar lib/spring-beans-2.5.1.jar lib/sprin
- g-context-2.5.1.jar lib/aopalliance-1.0.jar lib/spring-web-2.5.1.jar 
- lib/axis2-transport-http-1.6.1.jar lib/httpcore-4.0.jar lib/axis2-tra
- nsport-local-1.6.1.jar lib/axis2-json-1.6.1.jar lib/jettison-1.0-RC2.
- jar lib/backport-util-concurrent-3.1.jar lib/annogen-0.1.0.jar lib/co
- mmons-lang3-3.0.1.jar lib/ols-v_1_2_0-schema-1.0.3.jar lib/jaxb2-basi
- cs-runtime-0.6.0.jar lib/gml-v_3_1_1-schema-1.0.3.jar lib/xmlbeans-xp
- ath-2.3.0.jar lib/xmlbeans-2.3.0.jar lib/stax-api-1.0.1.jar lib/saxon
- -8.7.jar lib/jaxb-api-2.2.4.jar lib/stax-api-1.0-2.jar lib/activation
- -1.1.jar lib/postgresql-9.0-801.jdbc4.jar lib/postgis-jdbc-1.3.3.jar 
- lib/postgis-stubs-1.3.3.jar lib/hibernate-spatial-postgis-1.1.jar lib
- /hibernate-spatial-1.1.jar lib/jts-1.11.jar lib/xercesImpl-2.4.0.jar 
- lib/javassist-3.11.0.GA.jar lib/c3p0-0.9.1.2.jar lib/log4j-1.2.12.jar
-  lib/slf4j-api-1.6.1.jar lib/cglib-2.2.2.jar lib/asm-3.3.1.jar
-Specification-Title: OpenLS
-Specification-Version: 0.0.1-SNAPSHOT
 Implementation-Title: OpenLS
 Implementation-Version: 0.0.1-SNAPSHOT
 Implementation-Vendor-Id: org.gofleet
+Build-Jdk: 1.6.0_26
+Built-By: marias
+Specification-Title: OpenLS
+Created-By: Apache Maven
+Specification-Version: 0.0.1-SNAPSHOT
 

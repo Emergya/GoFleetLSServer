@@ -56,7 +56,7 @@ import com.vividsolutions.jts.geom.impl.CoordinateArraySequence;
  */
 public class OpenLSClientTest {
 
-	private String url = "http://localhost:8080/openLS/";
+	private String url = "http://gofre:8081/openLS/";
 	private PrecisionModel pm = new PrecisionModel(PrecisionModel.FIXED);
 	private GeometryFactory gf = new GeometryFactory(pm, 4326);
 

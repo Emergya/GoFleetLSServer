@@ -220,11 +220,7 @@ public class RoutingDAO {
 		Long last = -1l;
 		List<Coordinate> coords = new LinkedList<Coordinate>();
 		double cost = 0;
-
-		int i = 0;
-
 		for (HBA step : resultado) {
-			i++;
 			try {
 				Long current = step.getId();
 				if (!current.equals(last)) {

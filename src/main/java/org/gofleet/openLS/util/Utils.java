@@ -2,6 +2,7 @@ package org.gofleet.openLS.util;
 
 import java.io.FileNotFoundException;
 import java.io.StringReader;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.List;
 
@@ -63,6 +64,7 @@ public class Utils {
 	public static JAXBElement<XLSType> envelop(
 			List<List<AbstractResponseParametersType>> params) {
 		XLSType xlsType = new XLSType();
+		xlsType.setVersion(BigDecimal.ONE);
 
 		ResponseType responseType = new ResponseType();
 
@@ -79,6 +81,8 @@ public class Utils {
 			}
 			responseType.setNumberOfResponses(new BigInteger((new Integer(
 					element.size())).toString()));
+			responseType.setRequestID("-1");
+			responseType.setVersion("0.9");
 			xlsType.getBody()
 					.add(new JAXBElement(new QName(
 							"http://www.opengis.net/xls", "Response"),
@@ -86,12 +90,13 @@ public class Utils {
 		}
 
 		ResponseHeaderType header = new ResponseHeaderType();
+		header.setSessionID("none");
 
 		xlsType.setHeader(new JAXBElement<ResponseHeaderType>(new QName(
 				"http://www.opengis.net/xls", "ResponseHeader"),
 				ResponseHeaderType.class, header));
 
-		JAXBElement<XLSType> res = new JAXBElement(new QName(
+		JAXBElement<XLSType> res = new JAXBElement<XLSType>(new QName(
 				"http://www.opengis.net/xls", "xls"), XLSType.class, xlsType);
 
 		return res;
