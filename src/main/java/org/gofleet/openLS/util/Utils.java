@@ -64,7 +64,7 @@ public class Utils {
 	public static JAXBElement<XLSType> envelop(
 			List<List<AbstractResponseParametersType>> params) {
 		XLSType xlsType = new XLSType();
-		xlsType.setVersion(BigDecimal.ONE);
+		xlsType.setVersion(BigDecimal.valueOf(1.2d));
 
 		ResponseType responseType = new ResponseType();
 
