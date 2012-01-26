@@ -2,6 +2,11 @@ package org.gofleet.openLS;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Resource;
 import javax.ws.rs.Consumes;
@@ -15,6 +20,8 @@ import javax.xml.bind.JAXBException;
 import javax.xml.stream.FactoryConfigurationError;
 import javax.xml.stream.XMLStreamException;
 
+import net.opengis.xls.v_1_2_0.AbstractBodyType;
+import net.opengis.xls.v_1_2_0.AbstractRequestParametersType;
 import net.opengis.xls.v_1_2_0.AbstractResponseParametersType;
 import net.opengis.xls.v_1_2_0.DetermineRouteRequestType;
 import net.opengis.xls.v_1_2_0.DirectoryRequestType;
@@ -114,39 +121,57 @@ public class OpenLS {
 	public JAXBElement<XLSType> openLS(JAXBElement<XLSType> jaxbelement) {
 		XLSType parameter = jaxbelement.getValue();
 		LOG.trace("openLS(" + parameter + ")");
-		String method = Utils.getMethod(parameter);
+		final List<List<AbstractResponseParametersType>> resultado = new LinkedList<List<AbstractResponseParametersType>>();
 
-		List<List<AbstractResponseParametersType>> resultado = new LinkedList<List<AbstractResponseParametersType>>();
+		ExecutorService executor = Executors.newFixedThreadPool(3);
+
+		for (JAXBElement<? extends AbstractBodyType> jaxbbody : parameter
+				.getBody()) {
+
+			AbstractBodyType body = jaxbbody.getValue();
+
+			if (body instanceof RequestType) {
+
+				final AbstractRequestParametersType request = ((RequestType) body)
+						.getRequestParameters().getValue();
+
+				FutureTask<List<AbstractResponseParametersType>> thread = new FutureTask<List<AbstractResponseParametersType>>(
+						new Callable<List<AbstractResponseParametersType>>() {
+
+							public List<AbstractResponseParametersType> call()
+									throws Exception {
+								List<AbstractResponseParametersType> response = null;
+								try {
+
+									if (request instanceof DetermineRouteRequestType)
+										response = routePlan((DetermineRouteRequestType) request);
+									else if (request instanceof ReverseGeocodeRequestType)
+										response = reverseGeocoding((ReverseGeocodeRequestType) request);
+									else if (request instanceof GeocodeRequestType)
+										response = geocoding((GeocodeRequestType) request);
+									else if (request instanceof DirectoryRequestType)
+										response = directory((DirectoryRequestType) request);
+
+									synchronized (resultado) {
+										resultado.add(response);
+									}
+								} catch (Throwable e) {
+									LOG.error(e, e);
+									throw new RuntimeException(e);
+								}
+								return response;
+							}
+						});
+				executor.execute(thread);
+			}
+		}
 
 		try {
-			if (Utils.equals(routing, method))
-				resultado.add(routePlan(parameter));
-			else if (Utils.equals(reverseGeocoding, method))
-				resultado = reverseGeocoding(parameter);
-			else if (Utils.equals(geocoding, method))
-				resultado = geocoding(parameter);
-			else if (Utils.equals(directory, method))
-				resultado = directory(parameter);
-		} catch (JAXBException e) {
-			LOG.error(e, e);
-			throw new RuntimeException(e);
-		} catch (XMLStreamException e) {
-			LOG.error(e, e);
-			throw new RuntimeException(e);
-		} catch (FactoryConfigurationError e) {
-			LOG.error(e, e);
-			throw new RuntimeException(e);
-		} catch (SAXException e) {
-			LOG.error(e, e);
-			throw new RuntimeException(e);
-		} catch (Throwable e) {
-			LOG.error(e, e);
-			throw new RuntimeException(e);
+			executor.awaitTermination(30, TimeUnit.SECONDS);
+		} catch (InterruptedException e) {
+			executor.shutdownNow();
+			throw new RuntimeException("Execution took too long");
 		}
-		if (resultado == null)
-			throw new RuntimeException(
-					new Exception("Function not implemented"));
-
 		return Utils.envelop(resultado);
 	}
 
@@ -155,26 +180,13 @@ public class OpenLS {
 	 * 
 	 * @param parameter
 	 * @return
-	 * @throws AxisFault
-	 * @throws SAXException
-	 * @throws FactoryConfigurationError
-	 * @throws XMLStreamException
-	 * @throws JAXBException
 	 */
-	protected List<AbstractResponseParametersType> routePlan(XLSType xls)
-			throws JAXBException, XMLStreamException,
-			FactoryConfigurationError, SAXException {
-		@SuppressWarnings("unchecked")
-		RequestType body = ((JAXBElement<RequestType>) xls.getBody().get(0))
-				.getValue();
-		DetermineRouteRequestType param = (DetermineRouteRequestType) body
-				.getRequestParameters().getValue();
+	protected List<AbstractResponseParametersType> routePlan(
+			DetermineRouteRequestType param) {
 		AbstractResponseParametersType arpt = routingController
 				.routePlan(param);
 		List<AbstractResponseParametersType> list = new LinkedList<AbstractResponseParametersType>();
-
 		list.add(arpt);
-
 		return list;
 	}
 
@@ -183,21 +195,10 @@ public class OpenLS {
 	 * 
 	 * @param parameter
 	 * @return
-	 * @throws AxisFault
-	 * @throws SAXException
-	 * @throws FactoryConfigurationError
-	 * @throws XMLStreamException
-	 * @throws JAXBException
 	 */
-	@SuppressWarnings("unchecked")
-	protected List<List<AbstractResponseParametersType>> reverseGeocoding(
-			XLSType xls) throws JAXBException, XMLStreamException,
-			FactoryConfigurationError, SAXException {
-		RequestType body = ((JAXBElement<RequestType>) xls.getBody().get(0))
-				.getValue();
-		ReverseGeocodeRequestType param = (ReverseGeocodeRequestType) body
-				.getRequestParameters().getValue();
-		return geoCodingController.reverseGeocode(param);
+	protected List<AbstractResponseParametersType> reverseGeocoding(
+			ReverseGeocodeRequestType request) {
+		return geoCodingController.reverseGeocode(request);
 	}
 
 	/**
@@ -205,20 +206,9 @@ public class OpenLS {
 	 * 
 	 * @param parameter
 	 * @return
-	 * @throws AxisFault
-	 * @throws SAXException
-	 * @throws FactoryConfigurationError
-	 * @throws XMLStreamException
-	 * @throws JAXBException
 	 */
-	protected List<List<AbstractResponseParametersType>> directory(XLSType xls)
-			throws JAXBException, XMLStreamException,
-			FactoryConfigurationError, SAXException {
-		@SuppressWarnings("unchecked")
-		RequestType body = ((JAXBElement<RequestType>) xls.getBody().get(0))
-				.getValue();
-		DirectoryRequestType param = (DirectoryRequestType) body
-				.getRequestParameters().getValue();
+	protected List<AbstractResponseParametersType> directory(
+			DirectoryRequestType param) {
 		return geoCodingController.directory(param);
 	}
 
@@ -233,16 +223,9 @@ public class OpenLS {
 	 * @throws XMLStreamException
 	 * @throws JAXBException
 	 */
-	protected List<List<AbstractResponseParametersType>> geocoding(XLSType xls)
-			throws JAXBException, XMLStreamException,
-			FactoryConfigurationError, SAXException {
-		@SuppressWarnings("unchecked")
-		RequestType body = ((JAXBElement<RequestType>) xls.getBody().get(0))
-				.getValue();
-		GeocodeRequestType param = (GeocodeRequestType) body
-				.getRequestParameters().getValue();
-
-		return geoCodingController.geocoding(param);
+	protected List<AbstractResponseParametersType> geocoding(
+			GeocodeRequestType request) {
+		return geoCodingController.geocoding(request);
 	}
 
 }

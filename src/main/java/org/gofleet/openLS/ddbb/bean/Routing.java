@@ -5,6 +5,8 @@ package org.gofleet.openLS.ddbb.bean;
 import javax.persistence.Column;
 import javax.persistence.Id;
 
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.Table;
 
@@ -17,6 +19,7 @@ import com.vividsolutions.jts.geom.Geometry;
 @javax.persistence.Entity
 @Table(appliesTo = "routing")
 @javax.persistence.Table(name = "routing")
+@Cache(usage=CacheConcurrencyStrategy.READ_ONLY)
 public class Routing implements java.io.Serializable {
 
 	private int id;

@@ -45,17 +45,17 @@ public class GeoCoding {
 	@Resource
 	private GeoCodingDAO dao;
 
-	public List<List<AbstractResponseParametersType>> directory(
+	public List<AbstractResponseParametersType> directory(
 			DirectoryRequestType param) {
 		return dao.directory(param);
 	}
 
-	public List<List<AbstractResponseParametersType>> reverseGeocode(
+	public List<AbstractResponseParametersType> reverseGeocode(
 			ReverseGeocodeRequestType param) {
 		return dao.reverseGeocode(param);
 	}
 
-	public List<List<AbstractResponseParametersType>> geocoding(
+	public List<AbstractResponseParametersType> geocoding(
 			GeocodeRequestType param) {
 		return dao.geocoding(param);
 	}

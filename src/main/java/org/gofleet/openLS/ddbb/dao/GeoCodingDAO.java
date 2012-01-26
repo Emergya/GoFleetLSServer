@@ -30,7 +30,6 @@ package org.gofleet.openLS.ddbb.dao;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.sql.CallableStatement;
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.LinkedList;
@@ -84,13 +83,11 @@ public class GeoCodingDAO {
 	}
 
 	@Transactional(readOnly = true)
-	public List<List<AbstractResponseParametersType>> reverseGeocode(
+	public List<AbstractResponseParametersType> reverseGeocode(
 			final ReverseGeocodeRequestType param) {
-		HibernateCallback<List<List<AbstractResponseParametersType>>> action = new HibernateCallback<List<List<AbstractResponseParametersType>>>() {
-			public List<List<AbstractResponseParametersType>> doInHibernate(
+		HibernateCallback<List<AbstractResponseParametersType>> action = new HibernateCallback<List<AbstractResponseParametersType>>() {
+			public List<AbstractResponseParametersType> doInHibernate(
 					Session session) throws HibernateException, SQLException {
-
-				List<List<AbstractResponseParametersType>> res = new LinkedList<List<AbstractResponseParametersType>>();
 				PositionType position = param.getPosition();
 
 				position.getPoint().getPos().getValue();
@@ -118,7 +115,8 @@ public class GeoCodingDAO {
 						geocode.getAddress().setStreetAddress(
 								new StreetAddressType());
 					for (int i = 1; i < o.getMetaData().getColumnCount(); i++) {
-						String value = new String(o.getString(i).getBytes(), Charset.forName("ISO-8859-1"));
+						String value = new String(o.getString(i).getBytes(),
+								Charset.forName("ISO-8859-1"));
 						if (o.getMetaData().getColumnName(i).equals("street")) {
 							StreetNameType street = new StreetNameType();
 							street.setValue(value);
@@ -156,9 +154,7 @@ public class GeoCodingDAO {
 					}
 				}
 				res_.add(grt);
-
-				res.add(res_);
-				return res;
+				return res_;
 			}
 
 		};
@@ -167,24 +163,23 @@ public class GeoCodingDAO {
 	}
 
 	@Transactional(readOnly = true)
-	public List<List<AbstractResponseParametersType>> directory(
+	public List<AbstractResponseParametersType> directory(
 			DirectoryRequestType param) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Transactional(readOnly = true)
-	public List<List<AbstractResponseParametersType>> geocoding(
+	public List<AbstractResponseParametersType> geocoding(
 			final GeocodeRequestType param) {
-		HibernateCallback<List<List<AbstractResponseParametersType>>> action = new HibernateCallback<List<List<AbstractResponseParametersType>>>() {
-			public List<List<AbstractResponseParametersType>> doInHibernate(
+		HibernateCallback<List<AbstractResponseParametersType>> action = new HibernateCallback<List<AbstractResponseParametersType>>() {
+			public List<AbstractResponseParametersType> doInHibernate(
 					Session session) throws HibernateException, SQLException {
 
-				List<List<AbstractResponseParametersType>> res = new LinkedList<List<AbstractResponseParametersType>>();
 				List<AddressType> addressList = param.getAddress();
+				List<AbstractResponseParametersType> res_ = new LinkedList<AbstractResponseParametersType>();
 
 				for (AddressType addressType : addressList) {
-					List<AbstractResponseParametersType> res_ = new LinkedList<AbstractResponseParametersType>();
 
 					// TODO change deprecation?
 					@SuppressWarnings("deprecation")
@@ -229,9 +224,8 @@ public class GeoCodingDAO {
 						}
 						res_.add(grt);
 					}
-					res.add(res_);
 				}
-				return res;
+				return res_;
 			}
 
 		};

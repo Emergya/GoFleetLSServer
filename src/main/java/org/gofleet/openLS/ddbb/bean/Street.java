@@ -7,6 +7,9 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import com.vividsolutions.jts.geom.Geometry;
 
 
@@ -15,6 +18,7 @@ import com.vividsolutions.jts.geom.Geometry;
  */
 @Entity
 @Table(name = "street", schema = "public")
+@Cache(usage=CacheConcurrencyStrategy.READ_ONLY)
 public class Street implements java.io.Serializable {
 
 	private int id;
