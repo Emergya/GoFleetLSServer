@@ -39,8 +39,9 @@ public class RoutingServiceTests {
 	@Test
 	public void testSimpleRoute() throws FileNotFoundException, JAXBException,
 			XMLStreamException, FactoryConfigurationError, SAXException {
-		XLSType object = openLS.openLS(Utils.convertFile2XLSType(
-				"/determineRouteRequest.xml", XLSType.class)).getValue();
+		XLSType object = openLS.openLS(
+				Utils.convertFile2XLSType("/determineRouteRequest.xml",
+						XLSType.class)).getValue();
 
 		assertNotNull("Empty response", object);
 
@@ -56,7 +57,7 @@ public class RoutingServiceTests {
 
 		assertNotNull("The body is null! How? We have just checked it!", body);
 
-		assertTrue("The body should be unique", body.size() == 1);
+		assertEquals("The body should be unique", body.size(), 1);
 
 		Object o = body.get(0).getValue();
 

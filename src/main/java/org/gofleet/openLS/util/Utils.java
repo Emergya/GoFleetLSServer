@@ -103,26 +103,6 @@ public class Utils {
 	}
 
 	/**
-	 * Given a {@link XLSType} object, it returns the method called.
-	 * 
-	 * @param parameter
-	 * @return
-	 * @throws AxisFault
-	 */
-	public static String getMethod(XLSType xlsType) {
-		try {
-			@SuppressWarnings("unchecked")
-			RequestType requestType = ((JAXBElement<RequestType>) xlsType
-					.getBody().get(0)).getValue();
-
-			return requestType.getMethodName();
-		} catch (Throwable t) {
-			LOG.error("Error getting method.", t);
-			throw new RuntimeException(t);
-		}
-	}
-
-	/**
 	 * Check if rules contains method, ignoring case.
 	 * 
 	 * @param rules
