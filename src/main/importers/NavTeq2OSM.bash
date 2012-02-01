@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 if [ -e "$1" ]; then
   echo "NavTeq2OSM $1 -> $2"
@@ -14,7 +14,35 @@ main()
 
   echo "Collecting data into memory"
 
-  #dbfdump -m $SHP_PATH/Streets.shp
+
+  #nodes and ways
+  declare -a ways
+  for line in $(dbfdump -m $SHP_PATH/Streets.shp)
+  do
+
+    case $next in
+      id)
+	id=$line
+	ways[$id]=""$line
+	;;
+      tag_name)
+	ways[$id]=${ways[$id]}";name="$line
+	;;
+    esac
+
+    #echo $line
+    case $line in
+      LINK_ID*)
+	next="id"
+	;;
+      ST_NAME*)
+	next="tag_name"
+      ;;
+      *)
+	next="none"
+      ;;
+    esac
+  done
 
   echo "Writing file $OUT_FILE"
 
@@ -55,13 +83,24 @@ writeRelations(){
 }
 
 writeWays(){
-  if [ -e "$2" ]; then
-    echo "Writing ways"
-    for i in ${2[@]}
-    do
-      echo "   <way/>" >> $1
+  ways=$2
+  echo "writeWays"
+  for w in ${ways[@]}
+  do
+    IFS=";"
+    for word in $w; do
+      case $word in
+	*=*)
+	  index=$(expr index "$word" "=")
+	  echo "      <tag k='${word:0:$index-1}' v='${word:$index}'/>" >> $1
+	  ;;
+	*)
+	  echo "   <way id='$word'>" >> $1
+	  ;;
+      esac
     done
-  fi
+    echo "   </way>" >> $1
+  done
 }
 
 main $1 $2
