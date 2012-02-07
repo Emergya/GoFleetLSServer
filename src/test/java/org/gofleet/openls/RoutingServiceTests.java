@@ -39,9 +39,9 @@ public class RoutingServiceTests {
 	@Test
 	public void testSimpleRoute() throws FileNotFoundException, JAXBException,
 			XMLStreamException, FactoryConfigurationError, SAXException {
-		XLSType object = openLS.openLS(
-				Utils.convertFile2XLSType("/determineRouteRequest.xml",
-						XLSType.class)).getValue();
+		JAXBElement<XLSType> convertFile2XLSType = Utils.convertFile2XLSType(
+				"/determineRouteRequest.xml", XLSType.class);
+		XLSType object = openLS.openLS(convertFile2XLSType).getValue();
 
 		assertNotNull("Empty response", object);
 
@@ -98,8 +98,8 @@ public class RoutingServiceTests {
 		assertNotNull("There should be a list of positions",
 				posOrPointPropertyOrPointRep);
 
-		assertEquals("I was expecting five points",
-				posOrPointPropertyOrPointRep.size(), 10);
+		assertEquals("I was expecting more points", 10,
+				posOrPointPropertyOrPointRep.size());
 
 		for (JAXBElement<?> element : posOrPointPropertyOrPointRep) {
 			assertNotNull(element);

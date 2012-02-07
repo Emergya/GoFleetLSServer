@@ -32,8 +32,11 @@ import net.opengis.xls.v_1_2_0.XLSType;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.gofleet.configuration.Configuration;
 import org.gofleet.openLS.ddbb.GeoCoding;
 import org.gofleet.openLS.ddbb.Routing;
+import org.gofleet.openLS.util.MoNaVConnector;
+import org.gofleet.openLS.util.OSRMConnector;
 import org.gofleet.openLS.util.Utils;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
@@ -78,23 +81,8 @@ public class OpenLS {
 	@Resource
 	private GeoCoding geoCodingController;
 
-	/**
-	 * method parameter names for routing
-	 */
-	private static String[] routing = { "routePlan", "routeRequest", "routing" };
-	/**
-	 * method parameter names for reverseGeocoding
-	 */
-	private static String[] reverseGeocoding = { "reverseGeocoding",
-			"reverseGeocode", "RevGcReq" };
-	/**
-	 * method parameter names for directory
-	 */
-	private static String[] directory = { "directory", "DirectoryRequest" };
-	/**
-	 * method parameter names for geocoding
-	 */
-	private static String[] geocoding = { "geocoding", "GeocodeRequest" };
+	private MoNaVConnector monavConnector = new MoNaVConnector();
+	private OSRMConnector osrmConnector = new OSRMConnector();
 
 	/**
 	 * Stupid test to see if the Server is alive.
@@ -166,12 +154,14 @@ public class OpenLS {
 			}
 		}
 
+		executor.shutdown();
+
 		try {
-			executor.awaitTermination(30, TimeUnit.SECONDS);
+			executor.awaitTermination(10, TimeUnit.SECONDS);
 		} catch (InterruptedException e) {
-			executor.shutdownNow();
-			throw new RuntimeException("Execution took too long");
+			LOG.error(e, e);
 		}
+
 		return Utils.envelop(resultado);
 	}
 
@@ -183,9 +173,20 @@ public class OpenLS {
 	 */
 	protected List<AbstractResponseParametersType> routePlan(
 			DetermineRouteRequestType param) {
-		AbstractResponseParametersType arpt = routingController
-				.routePlan(param);
+
 		List<AbstractResponseParametersType> list = new LinkedList<AbstractResponseParametersType>();
+		AbstractResponseParametersType arpt = null;
+		try {
+			String conn = Configuration.get("RoutingConnector", "default");
+			if (conn.equals("PGROUTING"))
+				arpt = routingController.routePlan(param);
+			else if (conn.equals("MONAV"))
+				arpt = monavConnector.routePlan(param);
+			else
+				arpt = osrmConnector.routePlan(param);
+		} catch (Throwable t) {
+			LOG.error("Error on routePlan", t);
+		}
 		list.add(arpt);
 		return list;
 	}

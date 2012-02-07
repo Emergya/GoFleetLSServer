@@ -91,7 +91,7 @@ public class RoutingDAO {
 	private static final String EPSG_4326 = Configuration.get("ROUTING_EPSG",
 			"EPSG:4326");
 
-	private GeometryFactory gf = new GeometryFactory();
+	public GeometryFactory gf = new GeometryFactory();
 
 	private HibernateTemplate hibernateTemplate;
 
@@ -162,7 +162,7 @@ public class RoutingDAO {
 		return hibernateTemplate.executeWithNativeSession(action);
 	}
 
-	private RouteGeometryType getRouteGeometry(
+	public RouteGeometryType getRouteGeometry(
 			com.vividsolutions.jts.geom.LineString geometry)
 			throws JAXBException, ParseException {
 

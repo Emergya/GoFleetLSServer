@@ -250,6 +250,12 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
+		<!-- JSON parser -->
+		<dependency>
+			<groupId>org.codehaus.jackson</groupId>
+			<artifactId>jackson-core-lgpl</artifactId>
+			<version>1.9.4</version>
+		</dependency>
 	</dependencies>
 
 	<repositories>

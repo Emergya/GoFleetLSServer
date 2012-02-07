@@ -76,7 +76,7 @@ public class Utils {
 
 				JAXBElement<? extends AbstractResponseParametersType> body_ = new JAXBElement(
 						new QName("http://www.opengis.net/xls", responseClass,
-								""), e.getClass(), e);
+								"xls"), e.getClass(), e);
 				responseType.setResponseParameters(body_);
 			}
 			responseType.setNumberOfResponses(new BigInteger((new Integer(
@@ -93,11 +93,11 @@ public class Utils {
 		header.setSessionID("none");
 
 		xlsType.setHeader(new JAXBElement<ResponseHeaderType>(new QName(
-				"http://www.opengis.net/xls", "ResponseHeader"),
+				"http://www.opengis.net/xls", "ResponseHeader", "xls"),
 				ResponseHeaderType.class, header));
 
 		JAXBElement<XLSType> res = new JAXBElement<XLSType>(new QName(
-				"http://www.opengis.net/xls", "xls"), XLSType.class, xlsType);
+				"http://www.opengis.net/xls", "xls", "xls"), XLSType.class, xlsType);
 
 		return res;
 	}
@@ -124,15 +124,6 @@ public class Utils {
 		Object tmp = m.unmarshal(Utils.class.getResourceAsStream(path));
 
 		return ((JAXBElement<XLSType>) tmp);
-	}
-
-	public static XLSType convertString2OMElement(String xml)
-			throws JAXBException {
-		Unmarshaller m = JAXBContext.newInstance(XLSType.class)
-				.createUnmarshaller();
-		StringReader sr = new StringReader(xml);
-		XLSType tmp = (XLSType) m.unmarshal(sr);
-		return tmp;
 	}
 
 }
