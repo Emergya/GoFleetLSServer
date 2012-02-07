@@ -63,6 +63,7 @@ import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
 import org.geotools.geometry.jts.JTS;
 import org.geotools.referencing.CRS;
+import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.gofleet.configuration.Configuration;
 import org.opengis.geometry.MismatchedDimensionException;
 import org.opengis.referencing.FactoryException;
@@ -161,9 +162,11 @@ public class OSRMConnector {
 			String url = http + "://" + host_port + "/viaroute";
 
 			CoordinateReferenceSystem sourceCRS = CRS.decode(EPSG_4326);
-			CoordinateReferenceSystem targetCRS = GeoUtil.getSRS(wayPointList.getStartPoint());
-			
-			Point point = GeoUtil.getPoint(wayPointList.getStartPoint(), sourceCRS);
+			CoordinateReferenceSystem targetCRS = GeoUtil.getSRS(wayPointList
+					.getStartPoint());
+
+			Point point = GeoUtil.getPoint(wayPointList.getStartPoint(),
+					sourceCRS);
 			url += "&start=" + point.getY() + "," + point.getX();
 			point = GeoUtil.getPoint(wayPointList.getEndPoint(), sourceCRS);
 			url += "&dest=" + point.getY() + "," + point.getX();
@@ -178,6 +181,9 @@ public class OSRMConnector {
 			LOG.debug(url);
 
 			LineStringType lst = new LineStringType();
+			
+			lst.setSrsName(targetCRS.getName().getCode());
+			
 
 			routeInstructionsList.setLang("en");
 
@@ -213,7 +219,8 @@ public class OSRMConnector {
 				} else if (jp.getCurrentName().equals("route_geometry")) {
 					String geometry = jp.getText();
 					decodeRouteGeometry(geometry,
-							lst.getPosOrPointPropertyOrPointRep(), targetCRS, sourceCRS);
+							lst.getPosOrPointPropertyOrPointRep(), targetCRS,
+							sourceCRS);
 				} else if (jp.getCurrentName().equals("route_instructions")) {
 					while (jp.nextToken() == JsonToken.START_ARRAY
 							&& jp.getCurrentToken() != null) {
