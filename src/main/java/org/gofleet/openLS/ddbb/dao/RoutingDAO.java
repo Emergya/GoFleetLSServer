@@ -139,16 +139,16 @@ public class RoutingDAO {
 
 				List<Geometry> stops = new LinkedList<Geometry>();
 				for (WayPointType wayPoint : wayPointList.getViaPoint()) {
-					stops.add(GeoUtil.getPoint(wayPoint));
+					stops.add(GeoUtil.getPoint(wayPoint, null));
 				}
-				stops.add(GeoUtil.getPoint(wayPointList.getEndPoint()));
+				stops.add(GeoUtil.getPoint(wayPointList.getEndPoint(), null));
 
 				consulta.setString("tablename", TABLE_ROUTING);
 				consulta.setParameterList("stoptable", stops,
 						GeometryUserType.TYPE);
 				consulta.setString("gid", GID_ROUTING);
 				consulta.setParameter("start",
-						GeoUtil.getPoint(wayPointList.getStartPoint()),
+						GeoUtil.getPoint(wayPointList.getStartPoint(), null),
 						GeometryUserType.TYPE);
 
 				consulta.setReadOnly(true);

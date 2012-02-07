@@ -110,15 +110,15 @@ public class MoNaVConnector {
 
 		WayPointListType wayPointList = param.getRoutePlan().getWayPointList();
 
-		Point point = GeoUtil.getPoint(wayPointList.getStartPoint());
+		Point point = GeoUtil.getPoint(wayPointList.getStartPoint(), null);
 		cmd += " " + point.getY() + " " + point.getX();
 
 		for (WayPointType wayPoint : wayPointList.getViaPoint()) {
-			point = GeoUtil.getPoint(wayPoint);
+			point = GeoUtil.getPoint(wayPoint, null);
 			cmd += " " + point.getY() + " " + point.getX();
 		}
 
-		point = GeoUtil.getPoint(wayPointList.getEndPoint());
+		point = GeoUtil.getPoint(wayPointList.getEndPoint(), null);
 		cmd += " " + point.getY() + " " + point.getX();
 
 		LOG.debug(cmd);

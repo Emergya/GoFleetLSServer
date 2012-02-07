@@ -116,4 +116,12 @@ public class RoutingServiceTests {
 		}
 
 	}
+
+	@Test
+	public void testSRSRouted() throws FileNotFoundException, JAXBException,
+			XMLStreamException, FactoryConfigurationError, SAXException {
+		JAXBElement<XLSType> convertFile2XLSType = Utils.convertFile2XLSType(
+				"/determineRouteRequestSRS.xml", XLSType.class);
+		assertNotNull(openLS.openLS(convertFile2XLSType).getValue());
+	}
 }

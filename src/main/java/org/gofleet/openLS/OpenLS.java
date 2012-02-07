@@ -32,17 +32,19 @@ import net.opengis.xls.v_1_2_0.XLSType;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.geotools.referencing.CRS;
 import org.gofleet.configuration.Configuration;
 import org.gofleet.openLS.ddbb.GeoCoding;
 import org.gofleet.openLS.ddbb.Routing;
 import org.gofleet.openLS.util.MoNaVConnector;
 import org.gofleet.openLS.util.OSRMConnector;
 import org.gofleet.openLS.util.Utils;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 import org.xml.sax.SAXException;
 
-/*
+/**
  * Copyright (C) 2011, Emergya (http://www.emergya.es)
  *
  * @author <a href="mailto:marias@emergya.es">María Arias</a>
@@ -107,7 +109,7 @@ public class OpenLS {
 	@Consumes({ MediaType.APPLICATION_XML, MediaType.TEXT_XML,
 			MediaType.APPLICATION_ATOM_XML })
 	public JAXBElement<XLSType> openLS(JAXBElement<XLSType> jaxbelement) {
-		XLSType parameter = jaxbelement.getValue();
+		final XLSType parameter = jaxbelement.getValue();
 		LOG.trace("openLS(" + parameter + ")");
 		final List<List<AbstractResponseParametersType>> resultado = new LinkedList<List<AbstractResponseParametersType>>();
 
@@ -130,7 +132,6 @@ public class OpenLS {
 									throws Exception {
 								List<AbstractResponseParametersType> response = null;
 								try {
-
 									if (request instanceof DetermineRouteRequestType)
 										response = routePlan((DetermineRouteRequestType) request);
 									else if (request instanceof ReverseGeocodeRequestType)
@@ -167,6 +168,7 @@ public class OpenLS {
 
 	/**
 	 * Calls the routing method
+	 * @param epsg 
 	 * 
 	 * @param parameter
 	 * @return
@@ -184,6 +186,7 @@ public class OpenLS {
 				arpt = monavConnector.routePlan(param);
 			else
 				arpt = osrmConnector.routePlan(param);
+			
 		} catch (Throwable t) {
 			LOG.error("Error on routePlan", t);
 		}

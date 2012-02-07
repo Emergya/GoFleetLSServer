@@ -30,7 +30,6 @@ package org.gofleet.openLS.util;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URL;
-import java.util.LinkedList;
 import java.util.List;
 
 import javax.xml.bind.JAXBContext;
@@ -53,7 +52,6 @@ import net.opengis.xls.v_1_2_0.RouteGeometryType;
 import net.opengis.xls.v_1_2_0.RouteHandleType;
 import net.opengis.xls.v_1_2_0.RouteInstructionType;
 import net.opengis.xls.v_1_2_0.RouteInstructionsListType;
-import net.opengis.xls.v_1_2_0.RouteMapType;
 import net.opengis.xls.v_1_2_0.RouteSummaryType;
 import net.opengis.xls.v_1_2_0.WayPointListType;
 import net.opengis.xls.v_1_2_0.WayPointType;
@@ -63,8 +61,17 @@ import org.apache.commons.logging.LogFactory;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
+import org.geotools.geometry.jts.JTS;
+import org.geotools.referencing.CRS;
 import org.gofleet.configuration.Configuration;
+import org.opengis.geometry.MismatchedDimensionException;
+import org.opengis.referencing.FactoryException;
+import org.opengis.referencing.NoSuchAuthorityCodeException;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.opengis.referencing.operation.MathTransform;
+import org.opengis.referencing.operation.TransformException;
 
+import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.io.ParseException;
@@ -75,6 +82,7 @@ import com.vividsolutions.jts.io.ParseException;
  */
 public class OSRMConnector {
 
+	protected static final String EPSG_4326 = "EPSG:4326";
 	private static Log LOG = LogFactory.getLog(OSRMConnector.class);
 	private GeometryFactory gf = new GeometryFactory();
 	private Unmarshaller unmarshaller;
@@ -152,13 +160,16 @@ public class OSRMConnector {
 
 			String url = http + "://" + host_port + "/viaroute";
 
-			Point point = GeoUtil.getPoint(wayPointList.getStartPoint());
+			CoordinateReferenceSystem sourceCRS = CRS.decode(EPSG_4326);
+			CoordinateReferenceSystem targetCRS = GeoUtil.getSRS(wayPointList.getStartPoint());
+			
+			Point point = GeoUtil.getPoint(wayPointList.getStartPoint(), sourceCRS);
 			url += "&start=" + point.getY() + "," + point.getX();
-			point = GeoUtil.getPoint(wayPointList.getEndPoint());
+			point = GeoUtil.getPoint(wayPointList.getEndPoint(), sourceCRS);
 			url += "&dest=" + point.getY() + "," + point.getX();
 
 			for (WayPointType wayPoint : wayPointList.getViaPoint()) {
-				point = GeoUtil.getPoint(wayPoint);
+				point = GeoUtil.getPoint(wayPoint, sourceCRS);
 				url += "&via=" + point.getY() + "," + point.getX();
 			}
 
@@ -186,7 +197,8 @@ public class OSRMConnector {
 							if (jp.getCurrentName().equals("total_time")) {
 								jp.nextToken();
 								Duration duration = dataTypeFactory
-										.newDuration(true, 0, 0, 0, 0, jp.getIntValue(), 0);
+										.newDuration(true, 0, 0, 0, 0,
+												jp.getIntValue(), 0);
 								routeSummary.setTotalTime(duration);
 							} else if (jp.getCurrentName().equals(
 									"total_distance")) {
@@ -200,9 +212,8 @@ public class OSRMConnector {
 					}
 				} else if (jp.getCurrentName().equals("route_geometry")) {
 					String geometry = jp.getText();
-
 					decodeRouteGeometry(geometry,
-							lst.getPosOrPointPropertyOrPointRep());
+							lst.getPosOrPointPropertyOrPointRep(), targetCRS, sourceCRS);
 				} else if (jp.getCurrentName().equals("route_instructions")) {
 					while (jp.nextToken() == JsonToken.START_ARRAY
 							&& jp.getCurrentToken() != null) {
@@ -214,21 +225,22 @@ public class OSRMConnector {
 							instruction += " on " + jp.getText();
 						e.setInstruction(instruction);
 						jp.nextToken();
-						
+
 						DistanceType distance = new DistanceType();
 						distance.setUom(DistanceUnitType.M);
 						distance.setValue(new BigDecimal(jp.getText()));
-						e.setDistance(distance );
-						
+						e.setDistance(distance);
+
 						jp.nextToken();
-						
-						Duration duration = dataTypeFactory
-								.newDuration(true, 0, 0, 0, 0, jp.getIntValue(), 0);
+
+						Duration duration = dataTypeFactory.newDuration(true,
+								0, 0, 0, 0, jp.getIntValue(), 0);
 						routeSummary.setTotalTime(duration);
 						e.setDuration(duration);
-						
+
 						while (jp.nextToken() != JsonToken.END_ARRAY
-								&& jp.getCurrentToken() != null);
+								&& jp.getCurrentToken() != null)
+							;
 						routeInstructionsList.getRouteInstruction().add(e);
 					}
 				}
@@ -249,7 +261,12 @@ public class OSRMConnector {
 	}
 
 	private List<JAXBElement<?>> decodeRouteGeometry(String encoded,
-			List<JAXBElement<?>> list) {
+			List<JAXBElement<?>> list, CoordinateReferenceSystem targetCRS,
+			CoordinateReferenceSystem sourceCRS)
+			throws NoSuchAuthorityCodeException, FactoryException,
+			MismatchedDimensionException, TransformException {
+		MathTransform transform = null;
+
 		double precision = 5;
 		precision = Math.pow(10, -precision);
 		int len = encoded.length(), index = 0, lat = 0, lng = 0;
@@ -272,9 +289,17 @@ public class OSRMConnector {
 			int dlng = (((result & 1) != 0) ? ~(result >> 1) : (result >> 1));
 			lng += dlng;
 
+			Coordinate coord = new Coordinate(lng * precision, lat * precision);
+			Point sourceGeometry = gf.createPoint(coord);
+			if (sourceCRS != targetCRS) {
+				if (transform == null)
+					transform = CRS.findMathTransform(sourceCRS, targetCRS);
+				sourceGeometry = JTS.transform(sourceGeometry, transform)
+						.getCentroid();
+			}
 			DirectPositionListType e = new DirectPositionListType();
-			e.getValue().add(lng * precision);
-			e.getValue().add(lat * precision);
+			e.getValue().add(coord.x);
+			e.getValue().add(coord.y);
 
 			JAXBElement<DirectPositionListType> elem = new JAXBElement<DirectPositionListType>(
 					new QName("http://www.opengis.net/gml", "pos", "gml"),
@@ -285,5 +310,4 @@ public class OSRMConnector {
 
 		return list;
 	}
-
 }

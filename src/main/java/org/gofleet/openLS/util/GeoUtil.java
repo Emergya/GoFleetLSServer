@@ -22,8 +22,14 @@ import net.opengis.xls.v_1_2_0.WayPointType;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.geotools.geometry.jts.JTS;
+import org.geotools.referencing.CRS;
 import org.gofleet.openLS.ddbb.dao.GeoCodingDAO;
-import org.gofleet.openLS.ddbb.dao.RoutingDAO;
+import org.opengis.geometry.MismatchedDimensionException;
+import org.opengis.referencing.FactoryException;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.opengis.referencing.operation.MathTransform;
+import org.opengis.referencing.operation.TransformException;
 import org.postgis.PGgeometry;
 import org.postgis.Point;
 import org.postgresql.jdbc4.Jdbc4Array;
@@ -204,19 +210,47 @@ public class GeoUtil {
 	}
 
 	public static com.vividsolutions.jts.geom.Point getPoint(
-			WayPointType startPoint) {
+			WayPointType startPoint, CoordinateReferenceSystem targetCRS) {
 
 		// TODO what if we don't receive coordinates?
 		PositionType ptype = (PositionType) startPoint.getLocation().getValue();
 		PointType pointType = ptype.getPoint();
 		DirectPositionType ctype = pointType.getPos();
 
+		CoordinateReferenceSystem sourceCRS = getSRS(startPoint);
+
 		com.vividsolutions.jts.geom.Point p = geomFact
 				.createPoint(new Coordinate(ctype.getValue().get(0), ctype
 						.getValue().get(1)));
-		
-		p.setSRID(4326);
+
+		if (targetCRS != null && !sourceCRS.equals(targetCRS)) {
+			try {
+				MathTransform transform = CRS.findMathTransform(sourceCRS,
+						targetCRS);
+				p = JTS.transform(p, transform).getCentroid();
+			} catch (Throwable t) {
+				LOG.error("Error converting coordinates", t);
+			}
+		}
+
 		return p;
+	}
+
+	public static CoordinateReferenceSystem getSRS(WayPointType point) {
+		// TODO what if we don't receive coordinates?
+		PositionType ptype = (PositionType) point.getLocation().getValue();
+		PointType pointType = ptype.getPoint();
+		try {
+			return CRS.decode(pointType.getSrsName());
+		} catch (Throwable e) {
+			LOG.trace(e, e);
+			try {
+				return CRS.decode("EPSG:4326");
+			} catch (Throwable t) {
+				LOG.trace(t);
+				return null;
+			}
+		}
 	}
 
 	public static com.vividsolutions.jts.geom.Geometry getGeometry(
