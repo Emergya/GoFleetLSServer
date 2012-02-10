@@ -1,97 +1,189 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/python
 
 import sys
+import codecs
+import string
 import getopt
 import shapefile
 import dbf
 import random
 import tempfile
 import progressbar
+import threading
+from threading import Thread
+from functools import wraps
 
-def main(argv):
-  output_file = None
-  shp_path = None
-  for opt,arg in argv:
-    if opt in ("--input-path"):
-      shp_path = arg
-    elif opt in ("-o", "--output-file"):
-      output_file = open(arg, 'w')
-    elif opt in ("-h", "--help"):
-      print "Usage NavTeq2OSM.py --i path-to-shapefiles --o output-file"
-      
-  if output_file is None or shp_path is None:
-    print "Usage NavTeq2OSM.py --i path-to-shapefiles --o output-file"
-  
-  shpfile = shapefile.Reader(shp_path + "/Streets")
-  rdms = dbf.Table(shp_path + "/Rdms.dbf")
-  zlevels = dbf.Table(shp_path + "/Zlevels.dbf")
-  
-  id_nodes=0
-  all_nodes = {}
-  
-  nodes_file = tempfile.TemporaryFile()
-  ways_file = tempfile.TemporaryFile()
-  relations_file = tempfile.TemporaryFile()
-  
-  max = shpfile.numRecords
-  cont = 0
-  
-  widgets = ['Importing data from NavTeq Shapes: ', progressbar.Bar(marker=progressbar.AnimatedMarker()),
-           ' ', progressbar.ETA()]
-  maxval = max + len(rdms) + len(zlevels) * 2
-  progress = progressbar.ProgressBar(widgets=widgets, maxval=maxval).start()
-  
-  levels = {}
-  
-  for i in range(0, len(zlevels)):
-    progress.update(i + cont)
-    record = zlevels[i]
-    
-    link_id=record[0]
-    level = record[3]
-    
-    point = record.shape().points[0]
-    key = str(point[0]) + "_" + str(point[1])
-    
-    if levels[key] is None:
-      levels[key] = {}
-    
-    if record[1] == 1:
-      levels[str(record['link_id']) + "_f"] = record['z_level']
-    else:
-      levels[str(record['link_id']) + "_t"] = record['z_level']
-      
-    
-  cont = len(zlevels)
-  
-  for vertex in levels:
-    progress.update(i + cont)
-    
-    for level in vertex:
-      
-    
-      relations_file.write('  <relation id="' + str(restriction_id) + '" type="restriction" restriction="' + str(restriction_type) + '">\n')
-      relations_file.write('    <member type="way" ref="' + str(way_from) + '" role="from"/>\n')
-      relations_file.write('    <member type="way" ref="' + str(way_to) + '" role="to"/>\n')
-      for n in via:
-	relations_file.write('    <member type="way" ref="' + str(n) + '" role="via"/>\n')
-      relations_file.write("  </relation>\n")  
-      
-      
-  cont = cont + len(levels)  
-  levels = None
-  for i in range(0, max):
 
-    progress.update(i + cont)
+def run_async(func):
+  @wraps(func)
+  def async_func(*args, **kwargs):
+          func_hl = Thread(target = func, args = args, kwargs = kwargs)
+          func_hl.start()
+          return func_hl
 
-    shpRecord = shpfile.shapeRecord(i)
+  return async_func
+
+
+
+def openShapefile(url):
+ # myshp = codecs.open(str(url)+".shp", "r")#, "utf-16")
+ # mydbf = codecs.open(str(url)+".dbf", "r")#, "utf-16")
+ # return shapefile.Reader(shp=myshp, dbf=mydbf)
+ return shapefile.Reader(url, 'r')
+
+def writeNode(file, attrs={}):
+  if not attrs.has_key("user"):
+    attrs["user"] = "navteq2osm"
+  if not attrs.has_key("uid"):
+    attrs["uid"] = "1"
+  if not attrs.has_key("timestamp"):
+    attrs["timestamp"] = "2012-01-19T19:07:25Z"
+  if not attrs.has_key("visible"):
+    attrs["visible"] = "true"
+  if not attrs.has_key("version"):
+    attrs["version"] = "1"
+  if not attrs.has_key("changeset"):
+    attrs["changeset"] = "1" 
+    
+  writeToFile(file,"  <node")
+  for k in attrs:
+    writeToFile(file," " + str(k) + str('="') + str(attrs.get(k)) + str('"'))
+  writeToFile(file," />\n")
+    
+def writeToFile(file, line):
+  try:
+    file.write(line.decode("utf-8").encode("utf-8"))
+    file.flush()
+  except:
+    print("Error writing " + str(line) + " to file ")
+    
+def getNode(point, id_nodes):
+  x = point[0]
+  y = point[1]
+  n_attrs = {}
+
+  n_attrs['id'] = id_nodes
+  n_attrs['lon'] = x
+  n_attrs['lat'] = y
+  
+  return n_attrs
+
+def writeWay(file, attrs, nodes, tags):
+  #Write way to file
+  writeToFile(file,"  <way")
+  
+  if not attrs.has_key("user"):
+    attrs["user"] = "navteq2osm"
+  if not attrs.has_key("uid"):
+    attrs["uid"] = "1"
+  if not attrs.has_key("timestamp"):
+    attrs["timestamp"] = "2012-01-19T19:07:25Z"
+  if not attrs.has_key("visible"):
+    attrs["visible"] = "true"
+  if not attrs.has_key("version"):
+    attrs["version"] = "1"
+  if not attrs.has_key("changeset"):
+    attrs["changeset"] = "1" 
+  
+  for k in attrs:
+    writeToFile(file," " + str(k) + "=" + str('"') + str(attrs.get(k)) + str('"') )
+  writeToFile(file," >\n")
+  for n in nodes:
+    writeToFile(file,"     <nd ref=" + str('"') + str(n) + str('"') + " />\n")
+  for k in tags:
+    try:
+      writeToFile(file,"     <tag " + str(k) + "=" + str('"')  + str(tags.get(k)) + str('" />\n'))
+    except:
+      print "Exception: " + str(k) + " = " + str(tags.get(k))
+  writeToFile(file,"  </way>\n")
+  
+def printHelp():
+  print("Usage NavTeq2OSM.py --i path-to-shapefiles --o output-file")
+  exit(1)
+  
+def printRelation(file, id, type, source, target, via={}):
+  writeToFile(file,'  <relation id="' + str(id) + '" type="restriction" restriction="' + str(type))
+  writeToFile(file, '" version="1" changeset="1" user="navteq2osm" uid="1" visible="true" timestamp="2012-01-19T11:40:26Z">\n')
+  writeToFile(file,'    <member type="way" ref="' + str(source) + '" role="from" />\n')
+  writeToFile(file,'    <member type="way" ref="' + str(target) + '" role="to" />\n')
+  for k in via:
+    writeToFile(file,'    <member type="' + str(via[k]) + '" ref="' + str(k) + '" role="via" />\n')
+  writeToFile(file,"  </relation>\n")  
+   
+@run_async
+def processStreets(zlevels, shpfile, nodes_file, ways_file, progress, relations_file):
+  
+  print("processStreets")
+  
+  ways = {}
+  nodes = {}
+  
+  restriction_id = 1
+  node_cont = 0
+  node_id = -1
+  
+  last_node_id = None
+  last_level = None
+  last_link_id = None
+  
+  #walking through all nodes
+  for i in range(0, zlevels.numRecords):
+    progress.update(i)
+    record = zlevels.shapeRecord(i)
+    
+    link_id = record.record[0]
+    level = record.record[3]
+    
+    #Nodes array saves nodes_id by coordinates and level
+    point = record.shape.points[0]
+    node_key = str(point[0]) + "_" + str(point[1]) + "_" + str(level)
+      
+    #Calculate node_id
+    if not nodes.has_key(node_key): #We haven't already saved it
+      if record.record[4] == 'Y': #Only saving intersections
+        nodes[node_key] = node_cont
+      node_id = node_cont
+      node_cont = node_cont + 1
+      writeNode(nodes_file, getNode(record.shape.points[0], node_id))
+    else: #We saved this node before
+      if record.record[4] == 'Y': #Only interested on intersections
+        node_id = nodes[node_key]
+      else:
+        node_id = node_cont
+        node_cont = node_cont + 1
+        writeNode(nodes_file, getNode(record.shape.points[0], node_id))
+    
+    #Save reference of node to ways array
+    if not ways.has_key(link_id) :
+      ways[link_id] = []
+    ways[link_id].append(node_id)
+      
+    #write node definition to file
+    
+  nodes = None
+  print("Ways: " + len(ways) + " vs " + len(shpfile))
+      
+  cont = zlevels.numRecords
+  zlevels = None
+  record = None
+  node_cont = None
+  node_id = None
+  
+  print("Writing ways")
+  
+  #Walking through all ways (vials)
+  for i in range(0, len(shpfile)):
+
+    progress.update(cont + i)
+
+    shpRecord = shpfile[i]
     tags={}
-    nodes=[]
     attrs={}
     
-    attrs['id'] = shpRecord.record[0]
+    attrs['id'] = shpRecord[0]
     
-    fclass = shpRecord.record[23]
+    fclass = shpRecord[23]
     if fclass == '1':
       tags['highway'] = 'primary'
     elif fclass ==  '2':
@@ -103,9 +195,9 @@ def main(argv):
     elif fclass ==  '5':
       tags['highway'] = 'residential'
     
-    tags['name'] = shpRecord.record[1]
+    tags['name'] = string.replace(str(shpRecord[1]).strip(), str('"'), str("'"))
     
-    dir_travel = shpRecord.record[32]
+    dir_travel = shpRecord[32]
     if dir_travel == 'F':
       tags['oneway'] = 'yes'
     elif dir_travel == 'T':
@@ -113,118 +205,32 @@ def main(argv):
     else:
       tags['oneway'] = 'no'
     
-    
-    #Process Nodes
-    
-    #Check source and target
-    from_point = shpRecord.shape.points[0]
-    to_point = shpRecord.shape.points[len(shpRecord.shape.points) - 1]
-    to=str(from_point[0]) + "_" + str(from_point[1])
-    fr=str(to_point[0]) + "_" + str(to_point[1])
-    
-    if all_nodes.has_key(to):
-      nodes.append(all_nodes.get(to))
+    if ways.has_key(shpRecord[0]):
+      nodes = ways[shpRecord[0]]
+      ways[shpRecord[0]] = None
     else:
-      x = from_point[0]
-      y = from_point[1]
-      all_nodes[to] = id_nodes
-      n_attrs = {}
-      
-      n_attrs['id'] = id_nodes
-      n_attrs['lon'] = x
-      n_attrs['lat'] = y
-      
-      nodes.append(id_nodes)
-      
-      #Write new node to file
-      nodes_file.write("  <node")
-      for k in n_attrs:
-	nodes_file.write(" " + str(k) + "=" + str(n_attrs.get(k)))
-      nodes_file.write("/>\n")
-      
-      id_nodes = id_nodes + 1
-      
+      print("Error: way without nodes!!" + shpRecord[0])
     
-    i = 1
-    while i < len(shpRecord.shape.points) - 2:
-      point = shpRecord.shape.points[i]
-      x = point[0]
-      y = point[1]
-      n_attrs = {}
-      
-      n_attrs['id'] = id_nodes
-      n_attrs['lon'] = x
-      n_attrs['lat'] = y
-      
-      nodes.append(id_nodes)
-      
-      #Write new node to file
-      nodes_file.write("  <node")
-      for k in n_attrs:
-	nodes_file.write(" " + str(k) + "=" + str(n_attrs.get(k)))
-      nodes_file.write("/>\n")
-      
-      id_nodes = id_nodes + 1
-      
-      i = i + 1
+    writeWay(ways_file, attrs, nodes, tags)
     
-    if all_nodes.has_key(fr):
-      nodes.append(all_nodes.get(fr))
-    else:
-      all_nodes[fr] = id_nodes
-      x = to_point[0]
-      y = to_point[1]
-      n_attrs = {}
-      
-      n_attrs['id'] = id_nodes
-      n_attrs['lon'] = x
-      n_attrs['lat'] = y
-      
-      nodes.append(id_nodes)
-      
-      #Write new node to file
-      nodes_file.write("  <node")
-      for k in n_attrs:
-	nodes_file.write(" " + str(k) + "=" + str(n_attrs.get(k)))
-      nodes_file.write("/>\n")
-      
-      id_nodes = id_nodes + 1
+  print("Streets processed")
     
-    #Write way to file
-    ways_file.write("  <way")
-    for k in attrs:
-      ways_file.write(" " + str(k) + "=" + str(attrs.get(k)))
-    ways_file.write(">\n")
-    for n in nodes:
-      ways_file.write("     <nd id=" + str(n) + "/>\n")
-    for k in tags:
-      ways_file.write("     <tag " + str(k) + "=" + str(tags.get(k)) + "/>\n")
-    ways_file.write("  </way>\n")
-    
-      
-  nodes = None
-  via = []
-  restriction_type = None
-  way_from = None
-  way_to = None
-  restriction_id = None
   
-  cont = cont + max
+@run_async
+def processRDMS(rdms, file, progress):
+  
+  print("processRDMS")
+  
+  restriction_type = None
   for i in range(0, len(rdms)):
-    progress.update(i + cont)
     record = rdms[i]
     
-    if record[3] == 1 :
+    if record[3] == 1:
       if restriction_type is not None:
-	relations_file.write('  <relation id="' + str(restriction_id) + '" type="restriction" restriction="' + str(restriction_type) + '">\n')
-	relations_file.write('    <member type="way" ref="' + str(way_from) + '" role="from"/>\n')
-	relations_file.write('    <member type="way" ref="' + str(way_to) + '" role="to"/>\n')
-	for n in via:
-	  relations_file.write('    <member type="way" ref="' + str(n) + '" role="via"/>\n')
-	relations_file.write("  </relation>\n")
-	
+        printRelation(file, restriction_id, restriction_type, way_from, way_to, via)
+        
       #Generating new restriction
-      via = []
+      via = {}
       #TODO:
       restriction_type = "no_right_turn"
       way_from = record[0]
@@ -232,46 +238,107 @@ def main(argv):
       restriction_id = record[1]
       
     else:
-      via.append(record[2])
+      via[record[2]] = "way"
       way_to = record[2]
+      restriction_id = record[1]
       
   if restriction_type is not None:
-    relations_file.write('  <relation id="' + str(restriction_id) + '" type="restriction" restriction="' + str(restriction_type) + '">')
-    relations_file.write('    <member type="way" ref="' + str(way_from) + '" role="from"/>')
-    relations_file.write('    <member type="way" ref="' + str(way_to) + '" role="to"/>')
-    
-    for n in via:
-      relations_file.write('    <member type="way" ref="' + str(n) + '" role="via"/>')
-    
-    relations_file.write("  </relation>\n")
+    printRelation(file, restriction_id, restriction_type, way_from, way_to, via)
+  print("RDMS processed")
     
    
-  progress.finish()
-  print "Writing data to file .osm"
+  
+def main(argv):
+  output_file = None
+  shp_path = None
+  for opt,arg in argv:
+    if opt in ("--input-path"):
+      shp_path = arg
+    elif opt in ("-o", "--output-file"):
+      output_file = codecs.open(arg, 'w', 'utf-8')
+    elif opt in ("-h", "--help"):
+      printHelp()
+      
+  if output_file is None or shp_path is None:
+    printHelp()
   
   
-  output_file.write("<?xml version='1.0' encoding='UTF-8'?>")
-  output_file.write('\n')
-  output_file.write(" <osm version='0.6' generator='navteq2osm'>")
-  output_file.write('\n')
+  #shpfile = openShapefile(shp_path + "/Streets")
+  shpfile = dbf.Table(shp_path + "/Streets.dbf",'test M', dbf_type='vfp',  codepage="cp850")
+  rdms = dbf.Table(shp_path + "/Rdms.dbf")
+  zlevels = openShapefile(shp_path + "/Zlevels")
+  
+  
+  nodes_file_ = tempfile.NamedTemporaryFile()
+  nodes_file = codecs.open(nodes_file_.name, "r+w", "utf-8")
+  ways_file_ = tempfile.NamedTemporaryFile()
+  ways_file = codecs.open(ways_file_.name, "r+w", "utf-8")
+  relations_file_ = tempfile.NamedTemporaryFile()
+  relations_file = codecs.open(relations_file_.name, "r+w", "utf-8")
+  relations_file2_ = tempfile.NamedTemporaryFile()
+  relations_file2 = codecs.open(relations_file_.name, "r+w", "utf-8")
+  
+  widgets = ['Importing data from NavTeq Shapes: ', progressbar.Bar(marker=progressbar.AnimatedMarker()),
+           ' ', progressbar.ETA()]
+  maxval = len(shpfile) + zlevels.numRecords
+  progress = progressbar.ProgressBar(widgets=widgets, maxval=maxval).start()
+  progress.update(0)
+  
+  t1 = processStreets(zlevels, shpfile, nodes_file, ways_file, progress, relations_file2)
+  t2 = processRDMS(rdms, relations_file, progress)
+  
+  t1.join()
+  t2.join()
+
+  #Free memory:
+  shpfile = None
+  progress=None
+  rdms = None
+  n = None
+  via = None
+  record = None
+  restriction_id = None
+  restriction_type = None
+  way_from = None
+  way_to = None
+  
+  if not progress is None:
+    progress.finish()
+    
+  print("Writing data to file .osm")
+  
+  
+  writeToFile(output_file,"<?xml version='1.0' encoding='UTF-8'?>")
+  writeToFile(output_file,'\n')
+  writeToFile(output_file," <osm version='0.6' generator='navteq2osm'>")
+  writeToFile(output_file,'\n')
   
   nodes_file.seek(0)
   for line in nodes_file:
-    output_file.write(line)
+    writeToFile(output_file, line)
+  nodes_file.close()
+  nodes_file_.close()
     
   ways_file.seek(0)
   for line in ways_file:
-    output_file.write(line)
+    writeToFile(output_file, line)
+  ways_file.close()
+  ways_file_.close()
     
   relations_file.seek(0)
   for line in relations_file:
-    output_file.write(line)
-  output_file.write(' </osm>')
+    writeToFile(output_file, line)
+  relations_file.close()
+  relations_file_.close()
+    
+  relations_file2.seek(0)
+  for line in relations_file2:
+    writeToFile(output_file, line)
+  writeToFile(output_file,' </osm>')
+  relations_file2.close()
+  relations_file2_.close()
   
   output_file.close()
-  nodes_file.close()
-  ways_file.close()
-  relations_file.close()
       
 if __name__ == "__main__":
   options, remainder = getopt.getopt(sys.argv[1:], 'o:v', ['input-path=', 'help', 'output-file='])

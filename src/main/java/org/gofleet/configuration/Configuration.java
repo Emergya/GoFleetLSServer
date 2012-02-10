@@ -33,6 +33,22 @@ public class Configuration {
 		}
 	}
 
+	static public Boolean get(String key, Boolean value) {
+		try {
+			return getConfiguration().getBoolean(key, value);
+		} catch (Throwable t) {
+			return value;
+		}
+	}
+	
+	static public Double get(String key, Double value) {
+		try {
+			return getConfiguration().getDouble(key, value);
+		} catch (Throwable t) {
+			return value;
+		}
+	}
+
 	static public Integer get(String key, Integer value) {
 		try {
 			return getConfiguration().getInteger(key, value);
