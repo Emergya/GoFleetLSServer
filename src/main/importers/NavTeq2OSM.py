@@ -195,6 +195,7 @@ def processStreets(zlevels, shpfile, nodes_file, ways_file, progress, relations_
     name = shpRecord[1]
     name = name.strip()
     name = string.replace(name, str('"'), str("'")) #TODO
+    name = string.replace(name, str('&'), str(" ")) #TODO
     name = name.decode("utf-8").encode("UTF-8")
     tags['name'] = name
     
@@ -254,7 +255,7 @@ def main(argv):
     if opt in ("--input-path"):
       shp_path = arg
     elif opt in ("-o", "--output-file"):
-      output_file = codecs.open(arg, 'w', 'utf-8')
+      output_file = codecs.open(arg, "r+w", "utf_8_sig")
     elif opt in ("-h", "--help"):
       printHelp()
       
