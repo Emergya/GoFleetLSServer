@@ -6,7 +6,7 @@ import codecs
 import string
 import getopt
 import shapefile
-import dbf
+from dbfpy import dbf
 import random
 import tempfile
 import progressbar
@@ -52,11 +52,12 @@ def writeNode(file, attrs={}):
   writeToFile(file," />\n")
     
 def writeToFile(file, line):
-  try:
-    file.write(line.decode("utf-8").encode("utf-8"))
-    file.flush()
-  except:
-    print("Error writing " + str(line) + " to file ")
+#  try:
+    file.write(line.decode("utf-8"))
+    if random.random() > 0.75 :
+      file.flush()
+#  except:
+#    print("Error writing " + str(line) + " to file ")
     
 def getNode(point, id_nodes):
   x = point[0]
@@ -95,7 +96,7 @@ def writeWay(file, attrs, nodes, tags):
     try:
       writeToFile(file,"     <tag " + str(k) + "=" + str('"')  + str(tags.get(k)) + str('" />\n'))
     except:
-      print "Exception: " + str(k) + " = " + str(tags.get(k))
+      print("Exception: " + str(k) + " = " + str(tags.get(k)))
   writeToFile(file,"  </way>\n")
   
 def printHelp():
@@ -113,8 +114,6 @@ def printRelation(file, id, type, source, target, via={}):
    
 @run_async
 def processStreets(zlevels, shpfile, nodes_file, ways_file, progress, relations_file):
-  
-  print("processStreets")
   
   ways = {}
   nodes = {}
@@ -162,15 +161,12 @@ def processStreets(zlevels, shpfile, nodes_file, ways_file, progress, relations_
     #write node definition to file
     
   nodes = None
-  print("Ways: " + len(ways) + " vs " + len(shpfile))
       
   cont = zlevels.numRecords
   zlevels = None
   record = None
   node_cont = None
   node_id = None
-  
-  print("Writing ways")
   
   #Walking through all ways (vials)
   for i in range(0, len(shpfile)):
@@ -194,8 +190,13 @@ def processStreets(zlevels, shpfile, nodes_file, ways_file, progress, relations_
       tags['highway'] = 'tertiary'
     elif fclass ==  '5':
       tags['highway'] = 'residential'
-    
-    tags['name'] = string.replace(str(shpRecord[1]).strip(), str('"'), str("'"))
+      
+      
+    name = shpRecord[1]
+    name = name.strip()
+    name = string.replace(name, str('"'), str("'")) #TODO
+    name = name.decode("utf-8").encode("UTF-8")
+    tags['name'] = name
     
     dir_travel = shpRecord[32]
     if dir_travel == 'F':
@@ -209,17 +210,16 @@ def processStreets(zlevels, shpfile, nodes_file, ways_file, progress, relations_
       nodes = ways[shpRecord[0]]
       ways[shpRecord[0]] = None
     else:
-      print("Error: way without nodes!!" + shpRecord[0])
+      print("Error: way without nodes!!  " + str(shpRecord[0]))
     
     writeWay(ways_file, attrs, nodes, tags)
     
-  print("Streets processed")
+  if not progress is None:
+    progress.finish()
     
   
 @run_async
 def processRDMS(rdms, file, progress):
-  
-  print("processRDMS")
   
   restriction_type = None
   for i in range(0, len(rdms)):
@@ -244,7 +244,6 @@ def processRDMS(rdms, file, progress):
       
   if restriction_type is not None:
     printRelation(file, restriction_id, restriction_type, way_from, way_to, via)
-  print("RDMS processed")
     
    
   
@@ -263,9 +262,8 @@ def main(argv):
     printHelp()
   
   
-  #shpfile = openShapefile(shp_path + "/Streets")
-  shpfile = dbf.Table(shp_path + "/Streets.dbf",'test M', dbf_type='vfp',  codepage="cp850")
-  rdms = dbf.Table(shp_path + "/Rdms.dbf")
+  shpfile = dbf.Dbf(shp_path + "/Streets.dbf")
+  rdms = dbf.Dbf(shp_path + "/Rdms.dbf")
   zlevels = openShapefile(shp_path + "/Zlevels")
   
   
@@ -302,8 +300,6 @@ def main(argv):
   way_from = None
   way_to = None
   
-  if not progress is None:
-    progress.finish()
     
   print("Writing data to file .osm")
   
@@ -315,26 +311,35 @@ def main(argv):
   
   nodes_file.seek(0)
   for line in nodes_file:
-    writeToFile(output_file, line)
+    output_file.write(line)
+    if random.random() > 0.7 :
+      output_file.flush()
   nodes_file.close()
   nodes_file_.close()
     
   ways_file.seek(0)
   for line in ways_file:
-    writeToFile(output_file, line)
+    output_file.write(line)
+    if random.random() > 0.7 :
+      output_file.flush()
   ways_file.close()
   ways_file_.close()
     
   relations_file.seek(0)
   for line in relations_file:
-    writeToFile(output_file, line)
+    output_file.write(line)
+    if random.random() > 0.7 :
+      output_file.flush()
   relations_file.close()
   relations_file_.close()
     
   relations_file2.seek(0)
   for line in relations_file2:
-    writeToFile(output_file, line)
+    output_file.write(line)
+    if random.random() > 0.7 :
+      output_file.flush()
   writeToFile(output_file,' </osm>')
+  output_file.flush()
   relations_file2.close()
   relations_file2_.close()
   
