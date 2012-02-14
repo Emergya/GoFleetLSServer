@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 #!/usr/bin/python
 
+#Needs at least one giga of RAM
+#Also needs space on the temporary folder. If you run out of space, maybe you should
+#remount the /tmp folder with "sudo mount -o remount,size=2000M /tmp"
+
 import sys
 import codecs
 import string
@@ -11,14 +15,14 @@ import random
 import tempfile
 import progressbar
 import threading
-from threading import Thread
+from multiprocessing import Process
 from functools import wraps
 
 
 def run_async(func):
   @wraps(func)
   def async_func(*args, **kwargs):
-          func_hl = Thread(target = func, args = args, kwargs = kwargs)
+          func_hl = Process(target = func, args = args, kwargs = kwargs)
           func_hl.start()
           return func_hl
 
@@ -94,7 +98,7 @@ def writeWay(file, attrs, nodes, tags):
     writeToFile(file,"     <nd ref=" + str('"') + str(n) + str('"') + " />\n")
   for k in tags:
     try:
-      writeToFile(file,"     <tag " + str(k) + "=" + str('"')  + str(tags.get(k)) + str('" />\n'))
+      writeToFile(file,'     <tag k="' + str(k) + '" v="' + str(tags.get(k)) + '" />\n')
     except:
       print("Exception: " + str(k) + " = " + str(tags.get(k)))
   writeToFile(file,"  </way>\n")
@@ -103,23 +107,48 @@ def printHelp():
   print("Usage NavTeq2OSM.py --i path-to-shapefiles --o output-file")
   exit(1)
   
-def printRelation(file, id, type, source, target, via={}):
-  writeToFile(file,'  <relation id="' + str(id) + '" type="restriction" restriction="' + str(type))
-  writeToFile(file, '" version="1" changeset="1" user="navteq2osm" uid="1" visible="true" timestamp="2012-01-19T11:40:26Z">\n')
+def printRelation(file, id, type, source, target, via={}, attrs={}, tags={}):
+  
+  if not attrs.has_key("user"):
+    attrs["user"] = "navteq2osm"
+  if not attrs.has_key("uid"):
+    attrs["uid"] = "1"
+  if not attrs.has_key("timestamp"):
+    attrs["timestamp"] = "2012-02-19T19:07:25Z"
+  if not attrs.has_key("version"):
+    attrs["version"] = "1"
+  if not attrs.has_key("id"):
+    attrs["id"] = id
+  if not attrs.has_key("changeset"):
+    attrs["changeset"] = "1" 
+     
+  if not tags.has_key("type"):
+    tags["type"] = "restriction"
+  if not tags.has_key("restriction"):
+    tags["restriction"] = type
+    
+  writeToFile(file,'  <relation ')
+  for k in attrs:
+    writeToFile(file," " + str(k) + "=" + str('"') + str(attrs.get(k)) + str('"') )
+  writeToFile(file," >\n")
+    
   writeToFile(file,'    <member type="way" ref="' + str(source) + '" role="from" />\n')
   writeToFile(file,'    <member type="way" ref="' + str(target) + '" role="to" />\n')
   for k in via:
     writeToFile(file,'    <member type="' + str(via[k]) + '" ref="' + str(k) + '" role="via" />\n')
+  
+  for k in tags:
+    writeToFile(file,'     <tag k="' + str(k) + '" v="' + str(tags.get(k)) + '" />\n')
+    
   writeToFile(file,"  </relation>\n")  
-   
-@run_async
-def processStreets(zlevels, shpfile, nodes_file, ways_file, progress, relations_file):
+  
+def processStreets(zlevels, rdms, shpfile, nodes_file, ways_file, progress, relations_file):
   
   ways = {}
   nodes = {}
   
   restriction_id = 1
-  node_cont = 0
+  node_cont = 1
   node_id = -1
   
   last_node_id = None
@@ -160,6 +189,9 @@ def processStreets(zlevels, shpfile, nodes_file, ways_file, progress, relations_
       
     #write node definition to file
     
+  
+  t2 = processRDMS(rdms, relations_file, progress, ways)
+  
   nodes = None
       
   cont = zlevels.numRecords
@@ -197,7 +229,8 @@ def processStreets(zlevels, shpfile, nodes_file, ways_file, progress, relations_
     name = string.replace(name, str('"'), str("'")) #TODO
     name = string.replace(name, str('&'), str(" ")) #TODO
     name = name.decode("utf-8").encode("UTF-8")
-    tags['name'] = name
+    if len(name) > 0:
+      tags['name'] = name
     
     dir_travel = shpRecord[32]
     if dir_travel == 'F':
@@ -209,18 +242,19 @@ def processStreets(zlevels, shpfile, nodes_file, ways_file, progress, relations_
     
     if ways.has_key(shpRecord[0]):
       nodes = ways[shpRecord[0]]
-      ways[shpRecord[0]] = None
+   #   ways[shpRecord[0]] = None
     else:
       print("Error: way without nodes!!  " + str(shpRecord[0]))
     
     writeWay(ways_file, attrs, nodes, tags)
     
-  if not progress is None:
-    progress.finish()
+  t2.join()
     
   
 @run_async
-def processRDMS(rdms, file, progress):
+def processRDMS(rdms, file, progress, ways):
+  
+  rel = {}
   
   restriction_type = None
   for i in range(0, len(rdms)):
@@ -228,7 +262,11 @@ def processRDMS(rdms, file, progress):
     
     if record[3] == 1:
       if restriction_type is not None:
-        printRelation(file, restriction_id, restriction_type, way_from, way_to, via)
+        if not rel.has_key(restriction_id):
+          if len(via) == 0:
+            via = calculateVia(way_from, way_to, ways)
+          printRelation(file, restriction_id, restriction_type, way_from, way_to, via)
+          rel[restriction_id] = None
         
       #Generating new restriction
       via = {}
@@ -244,9 +282,28 @@ def processRDMS(rdms, file, progress):
       restriction_id = record[1]
       
   if restriction_type is not None:
+    if len(via) == 0:
+      via = calculateVia(way_from, way_to, ways)
     printRelation(file, restriction_id, restriction_type, way_from, way_to, via)
     
-   
+def calculateVia(source, target, ways = {}):
+  via = {}
+  
+  source_a = ways[source][0]
+  target_a = ways[target][0]
+  source_b = ways[source][len(ways[source]) - 1]
+  target_b = ways[target][len(ways[target]) - 1]
+  
+  if source_a == source_b:
+    via[source_a] = "node"
+  elif source_a == target_a:
+    via[source_a] = "node"
+  elif source_a == target_b:
+    via[source_a] = "node"
+  else:
+    via[source_b] = "node"
+  
+  return via
   
 def main(argv):
   output_file = None
@@ -255,7 +312,7 @@ def main(argv):
     if opt in ("--input-path"):
       shp_path = arg
     elif opt in ("-o", "--output-file"):
-      output_file = codecs.open(arg, "r+w", "utf_8_sig")
+      output_file = codecs.open(arg, "w", "utf_8_sig")
     elif opt in ("-h", "--help"):
       printHelp()
       
@@ -274,8 +331,6 @@ def main(argv):
   ways_file = codecs.open(ways_file_.name, "r+w", "utf-8")
   relations_file_ = tempfile.NamedTemporaryFile()
   relations_file = codecs.open(relations_file_.name, "r+w", "utf-8")
-  relations_file2_ = tempfile.NamedTemporaryFile()
-  relations_file2 = codecs.open(relations_file_.name, "r+w", "utf-8")
   
   widgets = ['Importing data from NavTeq Shapes: ', progressbar.Bar(marker=progressbar.AnimatedMarker()),
            ' ', progressbar.ETA()]
@@ -283,11 +338,10 @@ def main(argv):
   progress = progressbar.ProgressBar(widgets=widgets, maxval=maxval).start()
   progress.update(0)
   
-  t1 = processStreets(zlevels, shpfile, nodes_file, ways_file, progress, relations_file2)
-  t2 = processRDMS(rdms, relations_file, progress)
+  processStreets(zlevels, rdms, shpfile, nodes_file, ways_file, progress, relations_file)
   
-  t1.join()
-  t2.join()
+  if not progress is None:
+    progress.finish()
 
   #Free memory:
   shpfile = None
@@ -305,10 +359,11 @@ def main(argv):
   print("Writing data to file .osm")
   
   
-  writeToFile(output_file,"<?xml version='1.0' encoding='UTF-8'?>")
-  writeToFile(output_file,'\n')
-  writeToFile(output_file," <osm version='0.6' generator='navteq2osm'>")
-  writeToFile(output_file,'\n')
+  output_file.write("<?xml version='1.0' encoding='UTF-8'?>")
+  output_file.write('\n')
+  output_file.write(" <osm version='0.6' generator='navteq2osm'>")
+  output_file.write('\n')
+  output_file.flush()
   
   nodes_file.seek(0)
   for line in nodes_file:
@@ -333,17 +388,10 @@ def main(argv):
       output_file.flush()
   relations_file.close()
   relations_file_.close()
-    
-  relations_file2.seek(0)
-  for line in relations_file2:
-    output_file.write(line)
-    if random.random() > 0.7 :
-      output_file.flush()
-  writeToFile(output_file,' </osm>')
+      
+  output_file.write(' </osm>')
+  output_file.write('\n')ec
   output_file.flush()
-  relations_file2.close()
-  relations_file2_.close()
-  
   output_file.close()
       
 if __name__ == "__main__":
