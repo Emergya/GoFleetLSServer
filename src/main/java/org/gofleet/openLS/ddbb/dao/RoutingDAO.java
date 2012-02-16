@@ -57,7 +57,6 @@ import net.opengis.xls.v_1_2_0.WayPointType;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.gofleet.configuration.Configuration;
 import org.gofleet.openLS.ddbb.GeoCoding;
 import org.gofleet.openLS.ddbb.bean.HBA;
 import org.gofleet.openLS.util.GeoUtil;
@@ -83,13 +82,22 @@ import com.vividsolutions.jts.io.WKTReader;
 
 @Repository
 public class RoutingDAO {
-	private static final String GID_ROUTING = Configuration.get("ROUTING_ID",
-			"gid");
-	private static final String TABLE_ROUTING = Configuration.get(
-			"ROUTING_TABLE", "routing");
+	@Autowired
+	private org.gofleet.configuration.Configuration configuration;
+	/**
+	 * @return the configuration
+	 */
+	public org.gofleet.configuration.Configuration getConfiguration() {
+		return configuration;
+	}
 
-	private static final String EPSG_4326 = Configuration.get("ROUTING_EPSG",
-			"EPSG:4326");
+	/**
+	 * @param configuration the configuration to set
+	 */
+	public void setConfiguration(
+			org.gofleet.configuration.Configuration configuration) {
+		this.configuration = configuration;
+	}
 
 	public GeometryFactory gf = new GeometryFactory();
 
@@ -143,10 +151,10 @@ public class RoutingDAO {
 				}
 				stops.add(GeoUtil.getPoint(wayPointList.getEndPoint(), null));
 
-				consulta.setString("tablename", TABLE_ROUTING);
+				consulta.setString("tablename", configuration.get("ROUTING_TABLE", "routing"));
 				consulta.setParameterList("stoptable", stops,
 						GeometryUserType.TYPE);
-				consulta.setString("gid", GID_ROUTING);
+				consulta.setString("gid", configuration.get("ROUTING_ID", "gid"));
 				consulta.setParameter("start",
 						GeoUtil.getPoint(wayPointList.getStartPoint(), null),
 						GeometryUserType.TYPE);

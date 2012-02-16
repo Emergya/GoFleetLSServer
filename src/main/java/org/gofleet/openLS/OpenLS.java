@@ -32,44 +32,43 @@ import net.opengis.xls.v_1_2_0.XLSType;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.geotools.referencing.CRS;
-import org.gofleet.configuration.Configuration;
 import org.gofleet.openLS.ddbb.GeoCoding;
 import org.gofleet.openLS.ddbb.Routing;
 import org.gofleet.openLS.util.MoNaVConnector;
 import org.gofleet.openLS.util.OSRMConnector;
 import org.gofleet.openLS.util.Utils;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 import org.xml.sax.SAXException;
 
 /**
  * Copyright (C) 2011, Emergya (http://www.emergya.es)
- *
+ * 
  * @author <a href="mailto:marias@emergya.es">María Arias</a>
- *
- * This file is part of GoFleet
- *
- * This software is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
- *
- * As a special exception, if you link this library with other files to
- * produce an executable, this library does not by itself cause the
- * resulting executable to be covered by the GNU General Public License.
- * This exception does not however invalidate any other reasons why the
- * executable file might be covered by the GNU General Public License.
+ * 
+ *         This file is part of GoFleet
+ * 
+ *         This software is free software; you can redistribute it and/or modify
+ *         it under the terms of the GNU General Public License as published by
+ *         the Free Software Foundation; either version 2 of the License, or (at
+ *         your option) any later version.
+ * 
+ *         This software is distributed in the hope that it will be useful, but
+ *         WITHOUT ANY WARRANTY; without even the implied warranty of
+ *         MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ *         General Public License for more details.
+ * 
+ *         You should have received a copy of the GNU General Public License
+ *         along with this library; if not, write to the Free Software
+ *         Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ *         02110-1301 USA
+ * 
+ *         As a special exception, if you link this library with other files to
+ *         produce an executable, this library does not by itself cause the
+ *         resulting executable to be covered by the GNU General Public License.
+ *         This exception does not however invalidate any other reasons why the
+ *         executable file might be covered by the GNU General Public License.
  */
 @Controller(value = "openLSService")
 @Scope("session")
@@ -82,6 +81,24 @@ public class OpenLS {
 
 	@Resource
 	private GeoCoding geoCodingController;
+
+	@Autowired
+	private org.gofleet.configuration.Configuration configuration;
+
+	/**
+	 * @return the configuration
+	 */
+	public org.gofleet.configuration.Configuration getConfiguration() {
+		return configuration;
+	}
+
+	/**
+	 * @param configuration the configuration to set
+	 */
+	public void setConfiguration(
+			org.gofleet.configuration.Configuration configuration) {
+		this.configuration = configuration;
+	}
 
 	private MoNaVConnector monavConnector = new MoNaVConnector();
 	private OSRMConnector osrmConnector = new OSRMConnector();
@@ -168,7 +185,8 @@ public class OpenLS {
 
 	/**
 	 * Calls the routing method
-	 * @param epsg 
+	 * 
+	 * @param epsg
 	 * 
 	 * @param parameter
 	 * @return
@@ -179,14 +197,21 @@ public class OpenLS {
 		List<AbstractResponseParametersType> list = new LinkedList<AbstractResponseParametersType>();
 		AbstractResponseParametersType arpt = null;
 		try {
-			String conn = Configuration.get("RoutingConnector", "default");
+			String conn = configuration.get("RoutingConnector", "default");
 			if (conn.equals("PGROUTING"))
 				arpt = routingController.routePlan(param);
 			else if (conn.equals("MONAV"))
 				arpt = monavConnector.routePlan(param);
-			else
-				arpt = osrmConnector.routePlan(param);
-			
+			else {
+
+				String host_port = configuration.get("OSRM_HOST",
+						"localhost:5000");
+				String http = "http";
+				if (configuration.get("OSRM_SSL", "off").equals("on"))
+					http = "https";
+				arpt = osrmConnector.routePlan(param, host_port, http);
+			}
+
 		} catch (Throwable t) {
 			LOG.error("Error on routePlan", t);
 		}

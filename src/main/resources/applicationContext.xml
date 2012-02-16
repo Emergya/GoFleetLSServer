@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
 	xmlns:tx="http://www.springframework.org/schema/tx"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans 
 			http://www.springframework.org/schema/beans/spring-beans-3.0.xsd 
@@ -81,12 +80,20 @@
 	<!-- Application Beans -->
 	<bean id="routingDAO" class="org.gofleet.openLS.ddbb.dao.RoutingDAO">
 		<property name="sessionFactory" ref="sessionFactory" />
+		<property name="configuration" ref="configuration" />
 	</bean>
 	<bean id="geoCodingDAO" class="org.gofleet.openLS.ddbb.dao.GeoCodingDAO">
 		<property name="sessionFactory" ref="sessionFactory" />
 	</bean>
 	<bean id="routing" class="org.gofleet.openLS.ddbb.Routing" />
 	<bean id="geocoding" class="org.gofleet.openLS.ddbb.GeoCoding" />
-	<bean id="openLSService" class="org.gofleet.openLS.OpenLS" />
+	<bean id="configuration" class="org.gofleet.configuration.Configuration">
+		<property name="dataSource">
+			<ref bean="dataSource" />
+		</property>
+	</bean>
+	<bean id="openLSService" class="org.gofleet.openLS.OpenLS">
+		<property name="configuration" ref="configuration" />
+	</bean>
 
 </beans>  

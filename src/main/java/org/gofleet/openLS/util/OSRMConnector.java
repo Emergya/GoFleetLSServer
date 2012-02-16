@@ -109,6 +109,8 @@ public class OSRMConnector {
 	 * Route plan using osrm server.
 	 * 
 	 * @param param
+	 * @param host_port 
+	 * @param http 
 	 * @return
 	 * @throws IOException
 	 * @throws ParseException
@@ -116,7 +118,7 @@ public class OSRMConnector {
 	 * @throws InterruptedException
 	 */
 	public AbstractResponseParametersType routePlan(
-			DetermineRouteRequestType param) throws IOException, JAXBException,
+			DetermineRouteRequestType param, String host_port, String http) throws IOException, JAXBException,
 			ParseException, InterruptedException {
 
 		DetermineRouteResponseType res = new DetermineRouteResponseType();
@@ -152,12 +154,6 @@ public class OSRMConnector {
 			RouteGeometryType routeGeometry = new RouteGeometryType();
 			WayPointListType wayPointList = param.getRoutePlan()
 					.getWayPointList();
-
-			String host_port = Configuration.get("OSRM_HOST",
-					"gofre.emergya.es:5000");
-			String http = "http";
-			if (Configuration.get("OSRM_SSL", "off").equals("on"))
-				http = "https";
 
 			String url = http + "://" + host_port + "/viaroute";
 
