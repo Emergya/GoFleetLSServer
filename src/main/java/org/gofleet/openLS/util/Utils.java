@@ -97,7 +97,7 @@ public class Utils {
 				"http://www.opengis.net/xls", "ResponseHeader", "xls"),
 				ResponseHeaderType.class, header));
 		
-		xlsType.setLang(locale.getDisplayName());
+		xlsType.setLang(locale.getLanguage());
 
 		JAXBElement<XLSType> res = new JAXBElement<XLSType>(new QName(
 				"http://www.opengis.net/xls", "xls", "xls"), XLSType.class,
