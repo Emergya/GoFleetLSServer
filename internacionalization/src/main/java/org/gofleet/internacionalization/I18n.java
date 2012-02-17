@@ -28,7 +28,6 @@
 package org.gofleet.internacionalization;
 
 import java.text.MessageFormat;
-import java.util.Enumeration;
 import java.util.Locale;
 import java.util.ResourceBundle;
 
@@ -41,17 +40,17 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public class I18n {
-	
-	protected String defaultBundle = "i18n_string";
-	
+
+	protected String defaultBundle = "i18n/i18n_string";
+
 	@Autowired
 	private org.gofleet.configuration.Configuration configuration;
 
 	public I18n() {
-		if(configuration != null)
+		if (configuration != null)
 			defaultBundle = configuration.get("RESOURCE_BUNDLE", defaultBundle);
 	}
-	
+
 	public I18n(String bundle) {
 		this();
 		this.defaultBundle = bundle;
@@ -59,14 +58,14 @@ public class I18n {
 
 	public String getString(Locale locale, String key) {
 		try {
-			if(locale == null)
+			if (locale == null)
 				return getString(key);
 			return getResourceBundle(locale).getString(key);
 		} catch (Throwable e) {
 			return key;
 		}
 	}
-	
+
 	public String getString(String key) {
 		try {
 			return getResourceBundle(Locale.ROOT).getString(key);
