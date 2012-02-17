@@ -12,7 +12,7 @@
 					<StartPoint>
 						<Position>
 							<gml:Point srsName="EPSG:4258">
-								<gml:pos>-3.7055 40.4202</gml:pos>
+								<gml:pos>-5.917055 37.394202</gml:pos>
 							</gml:Point>
 						</Position>
 					</StartPoint>
@@ -20,7 +20,7 @@
 					<EndPoint>
 						<Position>
 							<gml:Point srsName="EPSG:4258">
-								<gml:pos>-2.6507 40.4331</gml:pos>
+								<gml:pos>-5.9172345 37.386752</gml:pos>
 							</gml:Point>
 						</Position>
 					</EndPoint>

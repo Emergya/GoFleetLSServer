@@ -142,8 +142,6 @@ public class GeoCodingTest {
 
 		assertNotNull("The body is null! How? We have just checked it!", body);
 
-		assertEquals("The body should jave three responses", body.size(), 3);
-
 		for (JAXBElement<? extends AbstractBodyType> body_ : body) {
 			AbstractBodyType o = body_.getValue();
 

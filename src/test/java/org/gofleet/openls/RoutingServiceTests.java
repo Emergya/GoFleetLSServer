@@ -12,6 +12,7 @@ import javax.xml.bind.JAXBException;
 import javax.xml.stream.FactoryConfigurationError;
 import javax.xml.stream.XMLStreamException;
 
+import net.opengis.gml.v_3_1_1.DirectPositionListType;
 import net.opengis.gml.v_3_1_1.DirectPositionType;
 import net.opengis.xls.v_1_2_0.AbstractBodyType;
 import net.opengis.xls.v_1_2_0.AbstractResponseParametersType;
@@ -98,15 +99,12 @@ public class RoutingServiceTests {
 		assertNotNull("There should be a list of positions",
 				posOrPointPropertyOrPointRep);
 
-		assertEquals("I was expecting more points", 10,
-				posOrPointPropertyOrPointRep.size());
-
 		for (JAXBElement<?> element : posOrPointPropertyOrPointRep) {
 			assertNotNull(element);
 			o = element.getValue();
 			assertNotNull(o);
-			assertTrue(o instanceof DirectPositionType);
-			DirectPositionType dpt = new DirectPositionType();
+			assertTrue(o instanceof DirectPositionListType);
+			DirectPositionListType dpt = (DirectPositionListType) o;
 			if (dpt.getValue().size() > 0)
 				assertEquals("Are we working on " + dpt.getValue().size()
 						+ " dimensions?" + dpt, 2, dpt.getValue().size());

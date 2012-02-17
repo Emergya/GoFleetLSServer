@@ -13,7 +13,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.annotation.ExpectedException;
+import org.springframework.test.annotation.Repeat;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
@@ -40,29 +40,18 @@ public class SimpleServiceTests {
 				XLSType.class);
 	}
 
-	@Test(timeout = 300000)
-	// @Repeat(value = 10)
+	@Test(timeout = 1000)
 	public void testEmptyRoute() throws FileNotFoundException, JAXBException {
 		openLS.openLS(determineRouteRequest);
 	}
 
-	@Test
-	// (timeout = 5000)
-	// @Repeat(value = 8)
+	@Test(timeout = 1000)
 	public void testEmptyGeocoding() throws FileNotFoundException,
 			JAXBException {
 		openLS.openLS(geocodingRequest);
 	}
-
+	
 	@Test(timeout = 1000)
-	@ExpectedException(value = RuntimeException.class)
-	public void testEmptyDirectory() throws FileNotFoundException,
-			JAXBException {
-		openLS.openLS(directoryRequest);
-	}
-
-	@Test(timeout = 5000)
-	// @Repeat(value = 8)
 	public void testEmptyReverseGeocoding() throws FileNotFoundException,
 			JAXBException {
 		openLS.openLS(reverseGeocodingRequest);
