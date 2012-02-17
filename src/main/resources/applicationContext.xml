@@ -95,5 +95,9 @@
 	<bean id="openLSService" class="org.gofleet.openLS.OpenLS">
 		<property name="configuration" ref="configuration" />
 	</bean>
+	
+	<bean id="i18n" class="org.gofleet.internacionalization.I18n">
+		<property name="configuration" ref="configuration" />
+	</bean>
 
 </beans>  

@@ -1,0 +1,49 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>org.gofleet</groupId>
+	<artifactId>configuration</artifactId>
+	<version>1.0.0</version>
+	<name>configuration</name>
+	<description>Configuration utility for the GoFleet Universe</description>
+
+	<distributionManagement>
+		<snapshotRepository>
+			<id>gofleet</id>
+			<url>http://nexus.emergya.es/nexus/content/repositories/gofleet</url>
+		</snapshotRepository>
+		<repository>
+			<id>gofleet_releases</id>
+			<url>http://nexus.emergya.es/nexus/content/repositories/gofleet-snap</url>
+		</repository>
+	</distributionManagement>
+
+	<dependencies>
+		<dependency>
+			<groupId>commons-configuration</groupId>
+			<artifactId>commons-configuration</artifactId>
+			<version>1.7</version>
+		</dependency>
+
+		<!-- Context (Spring) -->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context</artifactId>
+			<version>3.1.0.RELEASE</version>
+			<scope>compile</scope>
+		</dependency>
+		<!-- DBCP (Apache) -->
+		<dependency>
+			<groupId>commons-dbcp</groupId>
+			<artifactId>commons-dbcp</artifactId>
+			<version>1.4</version>
+		</dependency>
+	</dependencies>
+	<repositories>
+		<repository>
+			<id>Emergya Nexus</id>
+			<name>Emergya Nexus</name>
+			<url>http://nexus.emergya.es/nexus/content/groups/public/</url>
+		</repository>
+	</repositories>
+</project>

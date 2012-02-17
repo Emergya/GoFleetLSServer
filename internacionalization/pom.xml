@@ -1,0 +1,44 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.gofleet</groupId>
+  <artifactId>internacionalization</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>internacionalization</name>
+  <description>Internacionalization utility for the GofleetUniverse.</description>
+  
+	<distributionManagement>
+		<snapshotRepository>
+			<id>gofleet</id>
+			<name>Gofleet</name>
+			<url>http://nexus.emergya.es/nexus/content/repositories/gofleet</url>
+		</snapshotRepository>
+		<repository>
+			<id>gofleet_releases</id>
+			<name>Gofleet</name>
+			<url>http://nexus.emergya.es/nexus/content/repositories/gofleet-snap</url>
+		</repository>
+	</distributionManagement>
+  
+  <dependencies>
+		<dependency>
+			<groupId>org.gofleet</groupId>
+			<artifactId>configuration</artifactId>
+			<version>1.0.0</version>
+		</dependency>
+		<!-- test dependencies -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.8.2</version>
+			<scope>test</scope>
+		</dependency>
+  </dependencies>
+  
+  <repositories>
+		<repository>
+			<id>Emergya Nexus</id>
+			<name>Emergya Nexus</name>
+			<url>http://nexus.emergya.es/nexus/content/groups/public/</url>
+		</repository>
+	</repositories>
+</project>
