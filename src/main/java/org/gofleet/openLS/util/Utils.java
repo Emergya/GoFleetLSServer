@@ -1,7 +1,6 @@
 package org.gofleet.openLS.util;
 
 import java.io.FileNotFoundException;
-import java.io.StringReader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.List;
@@ -13,7 +12,6 @@ import javax.xml.bind.Unmarshaller;
 import javax.xml.namespace.QName;
 
 import net.opengis.xls.v_1_2_0.AbstractResponseParametersType;
-import net.opengis.xls.v_1_2_0.RequestType;
 import net.opengis.xls.v_1_2_0.ResponseHeaderType;
 import net.opengis.xls.v_1_2_0.ResponseType;
 import net.opengis.xls.v_1_2_0.XLSType;
@@ -69,16 +67,18 @@ public class Utils {
 		ResponseType responseType = new ResponseType();
 
 		for (List<AbstractResponseParametersType> element : params) {
-			for (AbstractResponseParametersType e : element) {
-				String responseClass = e.getClass().getSimpleName().toString();
-				responseClass = responseClass.substring(0,
-						responseClass.length() - 4);
+			if (element != null)
+				for (AbstractResponseParametersType e : element) {
+					String responseClass = e.getClass().getSimpleName()
+							.toString();
+					responseClass = responseClass.substring(0,
+							responseClass.length() - 4);
 
-				JAXBElement<? extends AbstractResponseParametersType> body_ = new JAXBElement(
-						new QName("http://www.opengis.net/xls", responseClass,
-								"xls"), e.getClass(), e);
-				responseType.setResponseParameters(body_);
-			}
+					JAXBElement<? extends AbstractResponseParametersType> body_ = new JAXBElement(
+							new QName("http://www.opengis.net/xls",
+									responseClass, "xls"), e.getClass(), e);
+					responseType.setResponseParameters(body_);
+				}
 			responseType.setNumberOfResponses(new BigInteger((new Integer(
 					element.size())).toString()));
 			responseType.setRequestID("-1");
@@ -97,7 +97,8 @@ public class Utils {
 				ResponseHeaderType.class, header));
 
 		JAXBElement<XLSType> res = new JAXBElement<XLSType>(new QName(
-				"http://www.opengis.net/xls", "xls", "xls"), XLSType.class, xlsType);
+				"http://www.opengis.net/xls", "xls", "xls"), XLSType.class,
+				xlsType);
 
 		return res;
 	}

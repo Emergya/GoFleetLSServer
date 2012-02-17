@@ -2,6 +2,7 @@ package org.gofleet.openLS;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -78,6 +79,9 @@ public class OpenLS {
 
 	@Resource
 	private Routing routingController;
+	
+	@Resource
+	private OSRMConnector osrmConnector;
 
 	@Resource
 	private GeoCoding geoCodingController;
@@ -93,7 +97,8 @@ public class OpenLS {
 	}
 
 	/**
-	 * @param configuration the configuration to set
+	 * @param configuration
+	 *            the configuration to set
 	 */
 	public void setConfiguration(
 			org.gofleet.configuration.Configuration configuration) {
@@ -101,7 +106,6 @@ public class OpenLS {
 	}
 
 	private MoNaVConnector monavConnector = new MoNaVConnector();
-	private OSRMConnector osrmConnector = new OSRMConnector();
 
 	/**
 	 * Stupid test to see if the Server is alive.
@@ -128,6 +132,14 @@ public class OpenLS {
 	public JAXBElement<XLSType> openLS(JAXBElement<XLSType> jaxbelement) {
 		final XLSType parameter = jaxbelement.getValue();
 		LOG.trace("openLS(" + parameter + ")");
+		Locale localetmp = Locale.ROOT;
+
+		if (parameter.getLang() != null
+				&& !parameter.getLang().isEmpty()) 
+			localetmp = new Locale(parameter.getLang());
+		
+		final Locale locale = localetmp;
+		localetmp = null;
 		final List<List<AbstractResponseParametersType>> resultado = new LinkedList<List<AbstractResponseParametersType>>();
 
 		ExecutorService executor = Executors.newFixedThreadPool(3);
@@ -148,9 +160,10 @@ public class OpenLS {
 							public List<AbstractResponseParametersType> call()
 									throws Exception {
 								List<AbstractResponseParametersType> response = null;
+								
 								try {
 									if (request instanceof DetermineRouteRequestType)
-										response = routePlan((DetermineRouteRequestType) request);
+										response = routePlan((DetermineRouteRequestType) request, locale);
 									else if (request instanceof ReverseGeocodeRequestType)
 										response = reverseGeocoding((ReverseGeocodeRequestType) request);
 									else if (request instanceof GeocodeRequestType)
@@ -192,7 +205,7 @@ public class OpenLS {
 	 * @return
 	 */
 	protected List<AbstractResponseParametersType> routePlan(
-			DetermineRouteRequestType param) {
+			DetermineRouteRequestType param, Locale locale) {
 
 		List<AbstractResponseParametersType> list = new LinkedList<AbstractResponseParametersType>();
 		AbstractResponseParametersType arpt = null;
@@ -209,7 +222,8 @@ public class OpenLS {
 				String http = "http";
 				if (configuration.get("OSRM_SSL", "off").equals("on"))
 					http = "https";
-				arpt = osrmConnector.routePlan(param, host_port, http);
+
+				arpt = osrmConnector.routePlan(param, host_port, http, locale);
 			}
 
 		} catch (Throwable t) {

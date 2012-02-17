@@ -31,12 +31,10 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.util.List;
+import java.util.Locale;
 
-import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
 import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.Duration;
 import javax.xml.namespace.QName;
@@ -63,14 +61,15 @@ import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
 import org.geotools.geometry.jts.JTS;
 import org.geotools.referencing.CRS;
-import org.geotools.referencing.crs.DefaultGeographicCRS;
-import org.gofleet.configuration.Configuration;
+import org.gofleet.internacionalization.I18n;
 import org.opengis.geometry.MismatchedDimensionException;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.NoSuchAuthorityCodeException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opengis.referencing.operation.MathTransform;
 import org.opengis.referencing.operation.TransformException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
 
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -81,36 +80,33 @@ import com.vividsolutions.jts.io.ParseException;
  * @author marias
  * 
  */
+@Repository
 public class OSRMConnector {
 
 	protected static final String EPSG_4326 = "EPSG:4326";
 	private static Log LOG = LogFactory.getLog(OSRMConnector.class);
 	private GeometryFactory gf = new GeometryFactory();
-	private Unmarshaller unmarshaller;
-	private JAXBContext context;
-	private Marshaller marshaller;
 	private DatatypeFactory dataTypeFactory = new com.sun.org.apache.xerces.internal.jaxp.datatype.DatatypeFactoryImpl();
 
+	@Autowired
+	private I18n i18n;
+
 	/**
-	 * 
+	 * @param i18n the i18n to set
 	 */
+	public void setI18n(I18n i18n) {
+		this.i18n = i18n;
+	}
+
 	public OSRMConnector() {
-		try {
-			unmarshaller = JAXBContext.newInstance(LineStringType.class)
-					.createUnmarshaller();
-			context = JAXBContext.newInstance("org.jvnet.ogc.gml.v_3_1_1.jts");
-			marshaller = context.createMarshaller();
-		} catch (JAXBException e) {
-			LOG.error(e, e);
-		}
 	}
 
 	/**
 	 * Route plan using osrm server.
 	 * 
 	 * @param param
-	 * @param host_port 
-	 * @param http 
+	 * @param host_port
+	 * @param http
 	 * @return
 	 * @throws IOException
 	 * @throws ParseException
@@ -118,8 +114,9 @@ public class OSRMConnector {
 	 * @throws InterruptedException
 	 */
 	public AbstractResponseParametersType routePlan(
-			DetermineRouteRequestType param, String host_port, String http) throws IOException, JAXBException,
-			ParseException, InterruptedException {
+			DetermineRouteRequestType param, String host_port, String http,
+			Locale locale) throws IOException, JAXBException, ParseException,
+			InterruptedException {
 
 		DetermineRouteResponseType res = new DetermineRouteResponseType();
 
@@ -177,9 +174,8 @@ public class OSRMConnector {
 			LOG.debug(url);
 
 			LineStringType lst = new LineStringType();
-			
+
 			lst.setSrsName(targetCRS.getName().getCode());
-			
 
 			routeInstructionsList.setLang("en");
 
@@ -222,10 +218,12 @@ public class OSRMConnector {
 							&& jp.getCurrentToken() != null) {
 						RouteInstructionType e = new RouteInstructionType();
 						jp.nextToken();
-						String instruction = jp.getText();
+						String instruction = i18n.getString(locale,
+								jp.getText());
 						jp.nextToken();
 						if (jp.getText().length() > 0)
-							instruction += " on " + jp.getText();
+							instruction += " " + i18n.getString(locale, "on")
+									+ " " + jp.getText();
 						e.setInstruction(instruction);
 						jp.nextToken();
 
@@ -254,7 +252,9 @@ public class OSRMConnector {
 			routeGeometry.setLineString(lst);
 			res.setRouteGeometry(routeGeometry);
 			res.setRouteHandle(routeHandle);
-			res.setRouteInstructionsList(routeInstructionsList);
+
+			if (param.getRouteInstructionsRequest() != null)
+				res.setRouteInstructionsList(routeInstructionsList);
 			res.setRouteSummary(routeSummary);
 		} catch (Throwable t) {
 			LOG.error("Error generating route response: " + t, t);

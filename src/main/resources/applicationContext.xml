@@ -99,5 +99,9 @@
 	<bean id="i18n" class="org.gofleet.internacionalization.I18n">
 		<property name="configuration" ref="configuration" />
 	</bean>
+	
+	<bean id="osrmConnector" class="org.gofleet.openLS.util.OSRMConnector">
+		<property name="i18n" ref="i18n" />
+	</bean>
 
 </beans>  

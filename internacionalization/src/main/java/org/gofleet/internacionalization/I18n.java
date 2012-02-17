@@ -46,6 +46,14 @@ public class I18n {
 	@Autowired
 	private org.gofleet.configuration.Configuration configuration;
 
+	/**
+	 * @param configuration the configuration to set
+	 */
+	public void setConfiguration(
+			org.gofleet.configuration.Configuration configuration) {
+		this.configuration = configuration;
+	}
+
 	public I18n() {
 		if (configuration != null)
 			defaultBundle = configuration.get("RESOURCE_BUNDLE", defaultBundle);
