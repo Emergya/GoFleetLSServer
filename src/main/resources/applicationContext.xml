@@ -82,16 +82,19 @@
 		<property name="sessionFactory" ref="sessionFactory" />
 		<property name="configuration" ref="configuration" />
 	</bean>
+	
 	<bean id="geoCodingDAO" class="org.gofleet.openLS.ddbb.dao.GeoCodingDAO">
 		<property name="sessionFactory" ref="sessionFactory" />
 	</bean>
+	
 	<bean id="routing" class="org.gofleet.openLS.ddbb.Routing" />
+	
 	<bean id="geocoding" class="org.gofleet.openLS.ddbb.GeoCoding" />
+	
 	<bean id="configuration" class="org.gofleet.configuration.Configuration">
-		<property name="dataSource">
-			<ref bean="dataSource" />
-		</property>
+		<property name="dataSource" ref="dataSource"/>
 	</bean>
+	
 	<bean id="openLSService" class="org.gofleet.openLS.OpenLS">
 		<property name="configuration" ref="configuration" />
 	</bean>
@@ -99,6 +102,7 @@
 	<bean id="i18n" class="org.gofleet.internacionalization.I18n">
 		<property name="configuration" ref="configuration" />
 	</bean>
+	
 	
 	<bean id="osrmConnector" class="org.gofleet.openLS.util.OSRMConnector">
 		<property name="i18n" ref="i18n" />

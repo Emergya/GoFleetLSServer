@@ -40,12 +40,12 @@ public class SimpleServiceTests {
 				XLSType.class);
 	}
 
-	@Test(timeout = 1000)
+	@Test
 	public void testEmptyRoute() throws FileNotFoundException, JAXBException {
 		openLS.openLS(determineRouteRequest);
 	}
 
-	@Test(timeout = 1000)
+	@Test
 	public void testEmptyGeocoding() throws FileNotFoundException,
 			JAXBException {
 		openLS.openLS(geocodingRequest);

@@ -4,6 +4,7 @@ import java.io.FileNotFoundException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.List;
+import java.util.Locale;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
@@ -60,7 +61,7 @@ public class Utils {
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public static JAXBElement<XLSType> envelop(
-			List<List<AbstractResponseParametersType>> params) {
+			List<List<AbstractResponseParametersType>> params, Locale locale) {
 		XLSType xlsType = new XLSType();
 		xlsType.setVersion(BigDecimal.valueOf(1.2d));
 
@@ -85,7 +86,7 @@ public class Utils {
 			responseType.setVersion("0.9");
 			xlsType.getBody()
 					.add(new JAXBElement(new QName(
-							"http://www.opengis.net/xls", "Response"),
+							"http://www.opengis.net/xls", "Response", "xls"),
 							responseType.getClass(), responseType));
 		}
 
@@ -95,11 +96,12 @@ public class Utils {
 		xlsType.setHeader(new JAXBElement<ResponseHeaderType>(new QName(
 				"http://www.opengis.net/xls", "ResponseHeader", "xls"),
 				ResponseHeaderType.class, header));
+		
+		xlsType.setLang(locale.getDisplayName());
 
 		JAXBElement<XLSType> res = new JAXBElement<XLSType>(new QName(
 				"http://www.opengis.net/xls", "xls", "xls"), XLSType.class,
 				xlsType);
-
 		return res;
 	}
 

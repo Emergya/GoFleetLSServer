@@ -79,7 +79,7 @@ public class OpenLS {
 
 	@Resource
 	private Routing routingController;
-	
+
 	@Resource
 	private OSRMConnector osrmConnector;
 
@@ -134,10 +134,10 @@ public class OpenLS {
 		LOG.trace("openLS(" + parameter + ")");
 		Locale localetmp = Locale.ROOT;
 
-		if (parameter.getLang() != null
-				&& !parameter.getLang().isEmpty()) 
+		if (parameter.getLang() != null && !parameter.getLang().isEmpty()) {
+			LOG.trace("Language detected: " + parameter.getLang());
 			localetmp = new Locale(parameter.getLang());
-		
+		}
 		final Locale locale = localetmp;
 		localetmp = null;
 		final List<List<AbstractResponseParametersType>> resultado = new LinkedList<List<AbstractResponseParametersType>>();
@@ -160,10 +160,12 @@ public class OpenLS {
 							public List<AbstractResponseParametersType> call()
 									throws Exception {
 								List<AbstractResponseParametersType> response = null;
-								
+
 								try {
 									if (request instanceof DetermineRouteRequestType)
-										response = routePlan((DetermineRouteRequestType) request, locale);
+										response = routePlan(
+												(DetermineRouteRequestType) request,
+												locale);
 									else if (request instanceof ReverseGeocodeRequestType)
 										response = reverseGeocoding((ReverseGeocodeRequestType) request);
 									else if (request instanceof GeocodeRequestType)
@@ -193,7 +195,7 @@ public class OpenLS {
 			LOG.error(e, e);
 		}
 
-		return Utils.envelop(resultado);
+		return Utils.envelop(resultado, locale);
 	}
 
 	/**
