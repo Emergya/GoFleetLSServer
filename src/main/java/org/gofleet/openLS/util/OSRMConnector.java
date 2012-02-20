@@ -33,6 +33,7 @@ import java.net.URL;
 import java.util.List;
 import java.util.Locale;
 
+import javax.ws.rs.core.MediaType;
 import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
 import javax.xml.datatype.DatatypeFactory;
@@ -169,15 +170,13 @@ public class OSRMConnector {
 				url += "&via=" + point.getY() + "," + point.getX();
 			}
 
-			url += "&z=15&output=json&geomformat=cmp&instructions=true";
+			url += "&output=json&instructions=true";
 
 			LOG.debug(url);
 
 			LineStringType lst = new LineStringType();
 
 			lst.setSrsName(targetCRS.getName().getCode());
-
-			routeInstructionsList.setLang("en");
 
 			JsonFactory f = new JsonFactory();
 			JsonParser jp = f.createJsonParser(new URL(url));
@@ -255,6 +254,8 @@ public class OSRMConnector {
 
 			if (param.getRouteInstructionsRequest() != null)
 				res.setRouteInstructionsList(routeInstructionsList);
+			res.getRouteInstructionsList().setFormat(MediaType.TEXT_PLAIN);
+			res.getRouteInstructionsList().setLang(locale.getLanguage());
 			res.setRouteSummary(routeSummary);
 		} catch (Throwable t) {
 			LOG.error("Error generating route response: " + t, t);
