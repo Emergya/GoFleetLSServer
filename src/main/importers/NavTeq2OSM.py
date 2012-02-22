@@ -31,9 +31,6 @@ def run_async(func):
 
 
 def openShapefile(url):
- # myshp = codecs.open(str(url)+".shp", "r")#, "utf-16")
- # mydbf = codecs.open(str(url)+".dbf", "r")#, "utf-16")
- # return shapefile.Reader(shp=myshp, dbf=mydbf)
  return shapefile.Reader(url, 'r')
 
 def writeNode(file, attrs={}):
@@ -56,12 +53,9 @@ def writeNode(file, attrs={}):
   writeToFile(file," />\n")
     
 def writeToFile(file, line):
-#  try:
     file.write(line.decode("utf-8"))
     if random.random() > 0.75 :
       file.flush()
-#  except:
-#    print("Error writing " + str(line) + " to file ")
     
 def getNode(point, id_nodes):
   x = point[0]
@@ -107,7 +101,7 @@ def printHelp():
   print("Usage NavTeq2OSM.py --i path-to-shapefiles --o output-file")
   exit(1)
   
-def printRelation(file, id, type, source, target, via={}, attrs={}, tags={}):
+def printRelation(file, id, source, target, via={}, tags={}, attrs={}):
   
   if not attrs.has_key("user"):
     attrs["user"] = "navteq2osm"
@@ -121,11 +115,6 @@ def printRelation(file, id, type, source, target, via={}, attrs={}, tags={}):
     attrs["id"] = id
   if not attrs.has_key("changeset"):
     attrs["changeset"] = "1" 
-     
-  if not tags.has_key("type"):
-    tags["type"] = "restriction"
-  if not tags.has_key("restriction"):
-    tags["restriction"] = type
     
   writeToFile(file,'  <relation ')
   for k in attrs:
@@ -142,12 +131,11 @@ def printRelation(file, id, type, source, target, via={}, attrs={}, tags={}):
     
   writeToFile(file,"  </relation>\n")  
   
-def processStreets(zlevels, rdms, shpfile, nodes_file, ways_file, progress, relations_file):
+def processStreets(zlevels, rdms, cdms, shpfile, nodes_file, ways_file, progress, relations_file):
   
   ways = {}
   nodes = {}
   
-  restriction_id = 1
   node_cont = 1
   node_id = -1
   
@@ -189,9 +177,12 @@ def processStreets(zlevels, rdms, shpfile, nodes_file, ways_file, progress, rela
       
     #write node definition to file
     
+  cdms_ = cleanCDMS(cdms)
+  cdms = None
   
-  t2 = processRDMS(rdms, relations_file, progress, ways)
+  t2 = processRDMS(rdms, cdms_, relations_file, progress, ways)
   
+  rdms = None
   nodes = None
       
   cont = zlevels.numRecords
@@ -226,8 +217,12 @@ def processStreets(zlevels, rdms, shpfile, nodes_file, ways_file, progress, rela
       
     name = shpRecord[1]
     name = name.strip()
-    name = string.replace(name, str('"'), str("'")) #TODO
-    name = string.replace(name, str('&'), str(" ")) #TODO
+    
+    #Some strange characters osm does not like:
+    name = string.replace(name, str('"'), str("'")) 
+    name = string.replace(name, str('&'), str(" ")) 
+    
+    #Just to be sure about codification, even when it looks stupid
     name = name.decode("utf-8").encode("UTF-8")
     if len(name) > 0:
       tags['name'] = name
@@ -246,15 +241,31 @@ def processStreets(zlevels, rdms, shpfile, nodes_file, ways_file, progress, rela
     else:
       print("Error: way without nodes!!  " + str(shpRecord[0]))
     
+    #Commented because it takes too long
+    #tags = getWayTags(cdms_, attrs['id'], tags)
     writeWay(ways_file, attrs, nodes, tags)
     
   t2.join()
     
+    
+#Instead of having to search through all the data, we just save in memory
+#the data we will be using.
+def cleanCDMS(cdms):
+  cdms_ = []
+  
+  try:
+    for cdm in cdms:
+      if cdm[2] == 3 or cdm[2] == 8 or cdm[2] == 21: # or cdm[2] == 2:
+        cdms_.append(cdm)
+  except:
+    pass
+  
+  return cdms_
   
 @run_async
-def processRDMS(rdms, file, progress, ways):
+def processRDMS(rdms, cdms, file, progress, ways):
   
-  rel = {}
+  restriction_id = 1
   
   restriction_type = None
   for i in range(0, len(rdms)):
@@ -262,29 +273,114 @@ def processRDMS(rdms, file, progress, ways):
     
     if record[3] == 1:
       if restriction_type is not None:
-        if not rel.has_key(restriction_id):
-          if len(via) == 0:
-            via = calculateVia(way_from, way_to, ways)
-          printRelation(file, restriction_id, restriction_type, way_from, way_to, via)
-          rel[restriction_id] = None
+        if len(via) == 0:
+          via = calculateVia(way_from, way_to, ways)
+        #We need to write afterwards because of the via members
+        tags = getRestrictionTags(cdms, restriction_id)
+        if tags.has_key('type'):
+          printRelation(file, restriction_id,  way_from, way_to, via, tags)
         
-      #Generating new restriction
+        
       via = {}
-      #TODO:
-      restriction_type = "no_right_turn"
       way_from = record[0]
+      tags = {}
       way_to = record[2]
       restriction_id = record[1]
       
     else:
-      via[record[2]] = "way"
+      via[way_to] = "way"
       way_to = record[2]
-      restriction_id = record[1]
       
+  #We need to write afterwards because of the via members
   if restriction_type is not None:
     if len(via) == 0:
       via = calculateVia(way_from, way_to, ways)
-    printRelation(file, restriction_id, restriction_type, way_from, way_to, via)
+    tags = getRestrictionTags(cdms, restriction_id)
+    if tags.has_key('type'):
+      printRelation(file, restriction_id, way_from, way_to, via, tags)
+    
+    
+def getRestrictionTags(cdms, res_id, tags={}):
+  
+  try:
+    for cdm in cdms:
+      if cdm[1] == id:
+        if cdm[2] == 3: #Construction Status Closed
+          tags['type'] = 'restriction'
+          tags['restriction'] = 'no_entry'
+        elif cdm[2] == 8: #Access Restriction
+          tags['type'] = 'restriction'
+          tags['restriction'] = 'no_straight_on'
+        #elif cdm[2] == 9: #Special Explication
+          #tags['type'] = None
+        #elif cdm[2] == 12: #Usage Fee Required
+          #tags['type'] = None
+        #elif cdm[2] == 13: #Lane Traversal
+          #tags['type'] = None
+        #elif cdm[2] == 14: #Through Route
+          #tags['type'] = None
+        #elif cdm[2] == 18: #Railway Crossing
+          #tags['type'] = None
+        #elif cdm[2] == 19: #Passing Restriction
+          #tags['type'] = None
+        #elif cdm[2] == 20: #Junction View
+          #tags['type'] = None
+        elif cdm[2] == 21: #Protected Overtaking
+          tags['type'] = 'overtaking'
+          
+        #exceptions
+        tags['except'] = ''
+        if cdm[8] == 'N':
+          tags['except'] = tags['except'] + 'motorcar;'
+        if cdm[9] == 'N' or cdm[10] == 'N' or cdm[15] == 'N':
+          tags['except'] = tags['except'] + 'psv;'
+        if cdm[12] == 'N':
+          tags['except'] = tags['except'] + 'bicycle;'
+        if cdm[13] == 'N':
+          tags['except'] = tags['except'] + 'hgv;'
+          
+        if tags['except'] == '':
+          tags['except'] = None
+        break
+  except:
+    pass
+  return tags
+  
+def getWayTags(cdms, res_id, tags={}):
+  
+  try:
+    for cdm in cdms:
+      if cdm[0] == id:
+        if cdm[2] == 2: #Toll structure
+          tags['toll'] = 'yes'
+        #elif cdm[2] == 4: #Gate
+          #tags['type'] = None
+        #elif cdm[2] == 5: #Direction of Travel
+          #tags['type'] = None
+        #elif cdm[2] == 7: #Gate
+          #tags['type'] = None
+        #elif cdm[2] == 9: #Special Explication
+          #tags['type'] = None
+      # elif cdm[2] == 10: #Special Speed Situation
+      #   tags['type'] = 'restriction'
+      #   condition modifier 1: 1-advisory, 2-dependent, 3-speed bumps present  
+      # elif cdm[2] == 11: #Variable Sign Speed
+      #   tags['type'] = None
+      # elif cdm[2] == 12: #Usage Fee Required
+      #   tags['type'] = None
+      # elif cdm[2] == 13: #Lane Traversal
+      #   tags['type'] = None
+      # elif cdm[2] == 14: #Through Route
+      #   tags['type'] = None
+        #elif cdm[2] == 19: #Passing Restriction
+          #tags['type'] = None
+        #elif cdm[2] == 20: #Junction View
+          #tags['type'] = None
+        break
+  except ValueError:
+    pass
+  return tags
+   
     
 def calculateVia(source, target, ways = {}):
   via = {}
@@ -323,6 +419,7 @@ def main(argv):
   shpfile = dbf.Dbf(shp_path + "/Streets.dbf")
   rdms = dbf.Dbf(shp_path + "/Rdms.dbf")
   zlevels = openShapefile(shp_path + "/Zlevels")
+  cdms = dbf.Dbf(shp_path + "/Cdms.dbf")
   
   
   nodes_file_ = tempfile.NamedTemporaryFile()
@@ -338,7 +435,7 @@ def main(argv):
   progress = progressbar.ProgressBar(widgets=widgets, maxval=maxval).start()
   progress.update(0)
   
-  processStreets(zlevels, rdms, shpfile, nodes_file, ways_file, progress, relations_file)
+  processStreets(zlevels, rdms, cdms, shpfile, nodes_file, ways_file, progress, relations_file)
   
   if not progress is None:
     progress.finish()
@@ -356,15 +453,17 @@ def main(argv):
   way_to = None
   
     
-  print("Writing data to file .osm")
-  
-  
+  progress = progressbar.ProgressBar(widgets=['Writing data to file .osm, please wait: ', progressbar.Bar(marker=progressbar.AnimatedMarker()),
+           ' ', progressbar.ETA()], maxval=5).start()
+           
+  progress.update(0)
   output_file.write("<?xml version='1.0' encoding='UTF-8'?>")
   output_file.write('\n')
   output_file.write(" <osm version='0.6' generator='navteq2osm'>")
   output_file.write('\n')
   output_file.flush()
   
+  progress.update(1)
   nodes_file.seek(0)
   for line in nodes_file:
     output_file.write(line)
@@ -372,6 +471,7 @@ def main(argv):
       output_file.flush()
   nodes_file.close()
   nodes_file_.close()
+  progress.update(2)
     
   ways_file.seek(0)
   for line in ways_file:
@@ -380,6 +480,7 @@ def main(argv):
       output_file.flush()
   ways_file.close()
   ways_file_.close()
+  progress.update(3)
     
   relations_file.seek(0)
   for line in relations_file:
@@ -388,11 +489,14 @@ def main(argv):
       output_file.flush()
   relations_file.close()
   relations_file_.close()
+  progress.update(4)
       
   output_file.write(' </osm>')
-  output_file.write('\n')ec
+  output_file.write('\n')
   output_file.flush()
   output_file.close()
+  progress.update(5)
+  progress.finish()
       
 if __name__ == "__main__":
   options, remainder = getopt.getopt(sys.argv[1:], 'o:v', ['input-path=', 'help', 'output-file='])
