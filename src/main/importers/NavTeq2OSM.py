@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #!/usr/bin/python
 
-#Needs at least one giga of RAM
+#Needs at least 2G of RAM
 #Also needs space on the temporary folder. If you run out of space, maybe you should
 #remount the /tmp folder with "sudo mount -o remount,size=2000M /tmp"
 
@@ -17,6 +17,8 @@ import progressbar
 import threading
 from multiprocessing import Process
 from functools import wraps
+
+numlines = 0
 
 
 def run_async(func):
@@ -54,6 +56,8 @@ def writeNode(file, attrs={}):
     
 def writeToFile(file, line):
     file.write(line.decode("utf-8"))
+    global numlines
+    numlines = numlines + 1
     if random.random() > 0.75 :
       file.flush()
     
@@ -101,7 +105,7 @@ def printHelp():
   print("Usage NavTeq2OSM.py --i path-to-shapefiles --o output-file")
   exit(1)
   
-def printRelation(file, id, source, target, via={}, tags={}, attrs={}):
+def printRelation(file, rid, source, target, via={}, tags={}, attrs={}):
   
   if not attrs.has_key("user"):
     attrs["user"] = "navteq2osm"
@@ -111,8 +115,8 @@ def printRelation(file, id, source, target, via={}, tags={}, attrs={}):
     attrs["timestamp"] = "2012-02-19T19:07:25Z"
   if not attrs.has_key("version"):
     attrs["version"] = "1"
-  if not attrs.has_key("id"):
-    attrs["id"] = id
+    
+  attrs["id"] = rid
   if not attrs.has_key("changeset"):
     attrs["changeset"] = "1" 
     
@@ -177,11 +181,12 @@ def processStreets(zlevels, rdms, cdms, shpfile, nodes_file, ways_file, progress
       
     #write node definition to file
     
-  cdms_ = cleanCDMS(cdms)
+  
+  t2 = processRDMS(rdms, cleanCDMS(cdms, [3, 7, 8, 21]), relations_file, ways)
+  
+  
+  cdms_ = cleanCDMS(cdms, [2])
   cdms = None
-  
-  t2 = processRDMS(rdms, cdms_, relations_file, progress, ways)
-  
   rdms = None
   nodes = None
       
@@ -242,7 +247,7 @@ def processStreets(zlevels, rdms, cdms, shpfile, nodes_file, ways_file, progress
       print("Error: way without nodes!!  " + str(shpRecord[0]))
     
     #Commented because it takes too long
-    #tags = getWayTags(cdms_, attrs['id'], tags)
+    tags = getWayTags(cdms_, attrs['id'], tags)
     writeWay(ways_file, attrs, nodes, tags)
     
   t2.join()
@@ -250,64 +255,60 @@ def processStreets(zlevels, rdms, cdms, shpfile, nodes_file, ways_file, progress
     
 #Instead of having to search through all the data, we just save in memory
 #the data we will be using.
-def cleanCDMS(cdms):
+def cleanCDMS(cdms, cond=[]):
   cdms_ = []
   
   try:
     for cdm in cdms:
-      if cdm[2] == 3 or cdm[2] == 8 or cdm[2] == 21: # or cdm[2] == 2:
-        cdms_.append(cdm)
+      for c in cond:
+        if c == cdm[2]:
+          cdms_.append(cdm)
   except:
     pass
   
   return cdms_
   
 @run_async
-def processRDMS(rdms, cdms, file, progress, ways):
+def processRDMS(rdms, cdms, file, ways = {}):
   
-  restriction_id = 1
+  tags = {}
+  via = {}
   
-  restriction_type = None
-  for i in range(0, len(rdms)):
-    record = rdms[i]
-    
-    if record[3] == 1:
-      if restriction_type is not None:
+  for rdm in rdms:
+    if rdm[3] == 1:
+      if tags.has_key('type'):
         if len(via) == 0:
           via = calculateVia(way_from, way_to, ways)
         #We need to write afterwards because of the via members
-        tags = getRestrictionTags(cdms, restriction_id)
-        if tags.has_key('type'):
-          printRelation(file, restriction_id,  way_from, way_to, via, tags)
-        
-        
+        printRelation(file, restriction_id,  way_from, way_to, via, tags)
+      
       via = {}
-      way_from = record[0]
-      tags = {}
-      way_to = record[2]
-      restriction_id = record[1]
+      restriction_id = rdm[1]
+      tags = getRestrictionTags(cdms, restriction_id, {})
+      way_from = rdm[0]
+      way_to = rdm[2]
       
     else:
       via[way_to] = "way"
-      way_to = record[2]
+      way_to = rdm[2]
       
   #We need to write afterwards because of the via members
-  if restriction_type is not None:
+  if tags.has_key('type'):
     if len(via) == 0:
       via = calculateVia(way_from, way_to, ways)
-    tags = getRestrictionTags(cdms, restriction_id)
-    if tags.has_key('type'):
-      printRelation(file, restriction_id, way_from, way_to, via, tags)
+    printRelation(file, restriction_id, way_from, way_to, via, tags)
     
     
 def getRestrictionTags(cdms, res_id, tags={}):
-  
   try:
     for cdm in cdms:
-      if cdm[1] == id:
+      if cdm[1] == res_id:
         if cdm[2] == 3: #Construction Status Closed
           tags['type'] = 'restriction'
           tags['restriction'] = 'no_entry'
+        elif cdm[2] == 7: #Restricted Driving Manoeuvre
+          tags['type'] = 'restriction'
+          tags['restriction'] = 'no_straight_on'          
         elif cdm[2] == 8: #Access Restriction
           tags['type'] = 'restriction'
           tags['restriction'] = 'no_straight_on'
@@ -340,24 +341,25 @@ def getRestrictionTags(cdms, res_id, tags={}):
           tags['except'] = tags['except'] + 'hgv;'
           
         if tags['except'] == '':
-          tags['except'] = None
+          del tags['except']
         break
   except:
     pass
+  
   return tags
   
 def getWayTags(cdms, res_id, tags={}):
   
   try:
     for cdm in cdms:
-      if cdm[0] == id:
+      if cdm[0] == res_id:
         if cdm[2] == 2: #Toll structure
           tags['toll'] = 'yes'
         #elif cdm[2] == 4: #Gate
           #tags['type'] = None
         #elif cdm[2] == 5: #Direction of Travel
           #tags['type'] = None
-        #elif cdm[2] == 7: #Gate
+        #elif cdm[2] == 7: #Restricted Driving Manoeuvre
           #tags['type'] = None
         #elif cdm[2] == 9: #Special Explication
           #tags['type'] = None
@@ -385,19 +387,20 @@ def getWayTags(cdms, res_id, tags={}):
 def calculateVia(source, target, ways = {}):
   via = {}
   
-  source_a = ways[source][0]
-  target_a = ways[target][0]
-  source_b = ways[source][len(ways[source]) - 1]
-  target_b = ways[target][len(ways[target]) - 1]
+  if ways.has_key(source) and ways.has_key(target):
+    source_a = ways[source][0]
+    target_a = ways[target][0]
+    source_b = ways[source][len(ways[source]) - 1]
+    target_b = ways[target][len(ways[target]) - 1]
   
-  if source_a == source_b:
-    via[source_a] = "node"
-  elif source_a == target_a:
-    via[source_a] = "node"
-  elif source_a == target_b:
-    via[source_a] = "node"
-  else:
-    via[source_b] = "node"
+    if source_a == source_b:
+      via[source_a] = "node"
+    elif source_a == target_a:
+      via[source_a] = "node"
+    elif source_a == target_b:
+      via[source_a] = "node"
+    else:
+      via[source_b] = "node"
   
   return via
   
@@ -453,8 +456,9 @@ def main(argv):
   way_to = None
   
     
-  progress = progressbar.ProgressBar(widgets=['Writing data to file .osm, please wait: ', progressbar.Bar(marker=progressbar.AnimatedMarker()),
-           ' ', progressbar.ETA()], maxval=5).start()
+  global numlines
+  progress = progressbar.ProgressBar(widgets=['Writing data to file .osm, please wait: ', progressbar.Percentage(), progressbar.Bar(marker=progressbar.AnimatedMarker()),
+           ' ', progressbar.ETA()], maxval=numlines + 10).start()
            
   progress.update(0)
   output_file.write("<?xml version='1.0' encoding='UTF-8'?>")
@@ -463,39 +467,37 @@ def main(argv):
   output_file.write('\n')
   output_file.flush()
   
-  progress.update(1)
   nodes_file.seek(0)
   for line in nodes_file:
     output_file.write(line)
+    progress.update(progress.currval + 1)
     if random.random() > 0.7 :
       output_file.flush()
   nodes_file.close()
   nodes_file_.close()
-  progress.update(2)
     
   ways_file.seek(0)
   for line in ways_file:
     output_file.write(line)
+    progress.update(progress.currval + 1)
     if random.random() > 0.7 :
       output_file.flush()
   ways_file.close()
   ways_file_.close()
-  progress.update(3)
     
   relations_file.seek(0)
   for line in relations_file:
     output_file.write(line)
+    progress.update(progress.currval + 1)
     if random.random() > 0.7 :
       output_file.flush()
   relations_file.close()
   relations_file_.close()
-  progress.update(4)
       
   output_file.write(' </osm>')
   output_file.write('\n')
   output_file.flush()
   output_file.close()
-  progress.update(5)
   progress.finish()
       
 if __name__ == "__main__":
