@@ -5,7 +5,7 @@
 #Also needs space on the temporary folder. If you run out of space, maybe you should
 #remount the /tmp folder with "sudo mount -o remount,size=2000M /tmp"
 
-import sys
+import sys, traceback
 import codecs
 import string
 import getopt
@@ -17,6 +17,7 @@ import progressbar
 import threading
 from multiprocessing import Process
 from functools import wraps
+from numpy import array, dot, sqrt, arccos, pi, arctan2
 
 numlines = 0
 
@@ -73,6 +74,12 @@ def getNode(point, id_nodes):
   return n_attrs
 
 def writeWay(file, attrs, nodes, tags):
+  
+  if nodes is None:
+    if attrs.has_key('id'):
+      print "Way without nodes: " + str(attrs['id'])
+    return
+  
   #Write way to file
   writeToFile(file,"  <way")
   
@@ -99,6 +106,7 @@ def writeWay(file, attrs, nodes, tags):
       writeToFile(file,'     <tag k="' + str(k) + '" v="' + str(tags.get(k)) + '" />\n')
     except:
       print("Exception: " + str(k) + " = " + str(tags.get(k)))
+      traceback.print_exc()
   writeToFile(file,"  </way>\n")
   
 def printHelp():
@@ -135,7 +143,7 @@ def printRelation(file, rid, source, target, via={}, tags={}, attrs={}):
     
   writeToFile(file,"  </relation>\n")  
   
-def processStreets(zlevels, rdms, cdms, shpfile, nodes_file, ways_file, progress, relations_file):
+def processStreets(zlevels, rdms, cdms, shpfile, nodes_file, ways_file, progress, relations_file, relations_file_):
   
   ways = {}
   nodes = {}
@@ -181,77 +189,124 @@ def processStreets(zlevels, rdms, cdms, shpfile, nodes_file, ways_file, progress
       
     #write node definition to file
     
-  
-  t2 = processRDMS(rdms, cleanCDMS(cdms, [3, 7, 8, 21]), relations_file, ways)
-  
-  
-  cdms_ = cleanCDMS(cdms, [2])
-  cdms = None
-  rdms = None
   nodes = None
-      
-  cont = zlevels.numRecords
-  zlevels = None
   record = None
   node_cont = None
   node_id = None
   
+  t2 = processRDMS(rdms, cleanCDMS(cdms, [3, 7, 8, 21]), relations_file, ways)
+  rdms = None
+  
+  t3 = processRDMS_divider(relations_file_, ways, shpfile.name, nodes_file.name)
+    
+  cdms = cleanCDMS(cdms, [2])
+  cont = zlevels.numRecords
+  zlevels = None
+  
   #Walking through all ways (vials)
   for i in range(0, len(shpfile)):
-
-    progress.update(cont + i)
-
-    shpRecord = shpfile[i]
-    tags={}
-    attrs={}
-    
-    attrs['id'] = shpRecord[0]
-    
-    fclass = shpRecord[23]
-    if fclass == '1':
-      tags['highway'] = 'primary'
-    elif fclass ==  '2':
-      tags['highway'] = 'trunk'
-    elif fclass ==  '3':
-      tags['highway'] = 'secondary'
-    elif fclass ==  '4':
-      tags['highway'] = 'tertiary'
-    elif fclass ==  '5':
-      tags['highway'] = 'residential'
+    try:
+      progress.update(cont + i)
+    except:
+      print "Couldn't update progressbar"
+      traceback.print_exc()
+    try:
+      shpRecord = shpfile[i]
+    except:
+      print "Malformed DBF Street[" + str(i) + "]"
+      continue
       
+    try:
+      way_id = shpRecord[0]
+    except:
+      print "Malformed DBF Street[" + str(i) + "]:: way_id"
+      continue
       
-    name = shpRecord[1]
-    name = name.strip()
+    try:
+      name = shpRecord[1]
+    except:
+      print "Malformed DBF Street[" + str(i) + "]::name"
+      continue
+      
+    try:
+      fclass = shpRecord[23]
+    except:
+      print "Malformed DBF Street[" + str(i) + "]::fclass"
+      continue
+      
+    try:
+      dir_travel = shpRecord[32]
+    except:
+      print "Malformed DBF Street[" + str(i) + "]::dir_travel"
+      continue
+      
+    try:
+      tags={}
+      attrs={}
+      
+      attrs['id'] = way_id
+      
+      if fclass == '1':
+        tags['highway'] = 'primary'
+      elif fclass ==  '2':
+        tags['highway'] = 'trunk'
+      elif fclass ==  '3':
+        tags['highway'] = 'secondary'
+      elif fclass ==  '4':
+        tags['highway'] = 'tertiary'
+      elif fclass ==  '5':
+        tags['highway'] = 'residential'
+    except:
+      print "Error extracting highway (" + str(fclass) + "):", sys.exc_info()[0]
+      traceback.print_exc()
+      
+    try:
+      name = name.strip()
+      
+      #Some strange characters osm does not like:
+      name = string.replace(name, str('"'), str("'")) 
+      name = string.replace(name, str('&'), str(" ")) 
+      
+      #Just to be sure about codification, even when it looks stupid
+      name = name.decode("utf-8").encode("UTF-8")
+      if len(name) > 0:
+        tags['name'] = name
+    except:
+      print "Error extracting name (" + str(name) + "):", sys.exc_info()[0]
+      traceback.print_exc()
+      
+    try:        
+      if dir_travel == 'F':
+        tags['oneway'] = 'yes'
+      elif dir_travel == 'T':
+        tags['oneway'] = '-1'
+      else:
+        tags['oneway'] = 'no'
+    except:
+      print "Error extracting oneway (" + str(dir_travel) + "):", sys.exc_info()[0]
+      traceback.print_exc()
+      
+    try:
+      
+      if ways.has_key(way_id):
+        nodes = ways[way_id]
+        ways[way_id] = None
+      else:
+        print("Error: way (" + str(way_id) + ") without nodes!! i=" + str(i))
+      
+      #Commented because it takes too long
+      tags = getWayTags(cdms, way_id, tags)
+      writeWay(ways_file, attrs, nodes, tags)
+    except:
+      print "Error processing streets (" + str(i) + "):", sys.exc_info()[0]
+      traceback.print_exc()
     
-    #Some strange characters osm does not like:
-    name = string.replace(name, str('"'), str("'")) 
-    name = string.replace(name, str('&'), str(" ")) 
-    
-    #Just to be sure about codification, even when it looks stupid
-    name = name.decode("utf-8").encode("UTF-8")
-    if len(name) > 0:
-      tags['name'] = name
-    
-    dir_travel = shpRecord[32]
-    if dir_travel == 'F':
-      tags['oneway'] = 'yes'
-    elif dir_travel == 'T':
-      tags['oneway'] = '-1'
-    else:
-      tags['oneway'] = 'no'
-    
-    if ways.has_key(shpRecord[0]):
-      nodes = ways[shpRecord[0]]
-   #   ways[shpRecord[0]] = None
-    else:
-      print("Error: way without nodes!!  " + str(shpRecord[0]))
-    
-    #Commented because it takes too long
-    tags = getWayTags(cdms_, attrs['id'], tags)
-    writeWay(ways_file, attrs, nodes, tags)
-    
+  
+  shpfile = None
+  ways = None
+  cdms = None
   t2.join()
-    
+  t3.join()
     
 #Instead of having to search through all the data, we just save in memory
 #the data we will be using.
@@ -264,7 +319,8 @@ def cleanCDMS(cdms, cond=[]):
         if c == cdm[2]:
           cdms_.append(cdm)
   except:
-    pass
+    print "Error processing cdms", sys.exc_info()[0]
+    traceback.print_exc()
   
   return cdms_
   
@@ -298,6 +354,125 @@ def processRDMS(rdms, cdms, file, ways = {}):
       via = calculateVia(way_from, way_to, ways)
     printRelation(file, restriction_id, way_from, way_to, via, tags)
     
+      
+@run_async
+def processRDMS_divider(relations_file_, ways, streetsname, nodes_file_name):
+  
+  res_id = 1
+  
+  nodes_file = open(nodes_file_name, "r")
+  streets = dbf.Dbf(streetsname, "r")
+  while nodes_file: #Walking through all ways (vials)
+    for i in range(0, len(streets)):
+      try:
+        street_ = streets[i]
+      except:
+        print "Malformed Street [" + str(i) +"]"
+      try:
+        divider = street_[31]
+        if divider == 'A' or divider == '1' or divider == '2':
+          way_id = street_[0]
+          street = ways[way_id]
+          node_a = street[0]
+          node_b = street[len(ways[way_id]) - 1]
+          for k in ways:
+            if k == way_id:
+              continue
+            try:
+              way = ways[k]
+              #We search for the angle of the intersections
+              #If it is a left turn, it is forbidden
+              if way[0] == node_a \
+                          and angle(searchLatLon(nodes_file, street[1]), \
+                                    searchLatLon(nodes_file, node_a), \
+                                    searchLatLon(nodes_file, way[1])) > 0:
+                printRelation(relations_file_, res_id, k, way_id, {node_a: 'node'}, {'type': 'restriction', 'type': 'no_right_turn'})
+                res_id = res_id + 1
+              elif way[len(way) - 1] == node_a \
+                          and angle(searchLatLon(nodes_file, street[1]), \
+                                    searchLatLon(nodes_file, node_b), \
+                                    searchLatLon(nodes_file, way[len(way) - 2])) > 0:
+                printRelation(relations_file_, res_id, k, way_id, {node_b: 'node'}, {'type': 'restriction', 'type': 'no_right_turn'})
+                res_id = res_id + 1
+              elif way[0] == node_b \
+                          and angle(searchLatLon(nodes_file, street[len(street) - 2]), \
+                                    searchLatLon(nodes_file, node_a), \
+                                    searchLatLon(nodes_file, way[1])) > 0:
+                printRelation(relations_file_, res_id, k, way_id, {node_a: 'node'}, {'type': 'restriction', 'type': 'no_right_turn'})
+                res_id = res_id + 1
+              elif way[len(way) - 1] == node_b \
+                          and angle(searchLatLon(nodes_file, street[len(street) - 2]), \
+                                    searchLatLon(nodes_file, node_b), \
+                                    searchLatLon(nodes_file, way[len(way) - 2])) > 0:
+                printRelation(relations_file_, res_id, k, way_id, {node_b: 'node'}, {'type': 'restriction', 'type': 'no_right_turn'})
+                res_id = res_id + 1
+            except AttributeError as ae:
+              print "AttributeError generating relation: i=" + str(i) + ", way_id=" + str(way_id) + ", k=" + str(k)
+              traceback.print_exc()
+            except:
+              print "Error generating relation:", sys.exc_info()[0]
+              traceback.print_exc()
+      except TypeError as te:
+        traceback.print_exc()
+      except:
+        print "Error processing divider:"
+        traceback.print_exc
+  streets.close()
+      
+      
+for k in ways:
+  if k == way_id:
+    continue
+  way = ways[k]
+  if way[0] == node_a:
+    p1 = searchLatLon(nodes_file, street[1])
+    p2 = searchLatLon(nodes_file, node_a)
+    p3 = searchLatLon(nodes_file, way[1])
+    print p1
+    print p2
+    print p3
+    print angle(p1, p2, p3)
+
+      
+def searchLatLon(nodes_file, node_id):
+  nodes_file.seek(0)
+  while 1:
+    lines = nodes_file.readlines(400)
+    if not lines:
+      break
+    for node in lines:
+      try:
+        if str(node_id) == node[(node.rfind(" id=")+5):(node.find("\"",node.find(" id=") + 5))]:
+          lat = float(node[(node.rfind(" lat=") + 6):(node.find("\"",node.find(" lat=") + 6))])
+          lon = float(node[(node.rfind(" lon=") + 6):(node.find("\"",node.find(" lon=") + 6))])
+          return [lat,lon] 
+      except:
+        print "Error searching Lat Lon from node:" + str(node_id), sys.exc_info()[0]
+        traceback.print_exc()
+  print "Node not found " + str(node_id)
+  return [0, 0]
+      
+def searchNodesOnWay(ways_file, way_id):
+  ways_file.seek(0)
+  nodes = None
+  while 1:
+    lines = ways_file.readlines(400)
+    if not lines:
+      break
+    for node in lines:
+      try:
+        if line.rfind("<way") > 0:
+          if str(way_id) == node[(node.rfind(" id=")+5):(node.find("\"",node.find(" id=") + 5))]:
+            nodes = []
+          elif nodes is not None:
+            return nodes
+            
+        if nodes is not None and line.rfind("<nd ref=") > 0:
+          nodes.append(int(node[(line.rfind(" ref=") + 6):(line.find("\"",line.find(" ref=") + 6))]))
+          
+      except:
+        pass
+  return nodes
     
 def getRestrictionTags(cdms, res_id, tags={}):
   try:
@@ -344,7 +519,8 @@ def getRestrictionTags(cdms, res_id, tags={}):
           del tags['except']
         break
   except:
-    pass
+    print "Error processing restriction tags from :" + str(res_id), sys.exc_info()[0]
+    traceback.print_exc()
   
   return tags
   
@@ -380,7 +556,8 @@ def getWayTags(cdms, res_id, tags={}):
           #tags['type'] = None
         break
   except ValueError:
-    pass
+    print "Error processing way tags from :" + str(res_id), sys.exc_info()[0]
+    traceback.print_exc()
   return tags
    
     
@@ -431,6 +608,8 @@ def main(argv):
   ways_file = codecs.open(ways_file_.name, "r+w", "utf-8")
   relations_file_ = tempfile.NamedTemporaryFile()
   relations_file = codecs.open(relations_file_.name, "r+w", "utf-8")
+  relations_file2_ = tempfile.NamedTemporaryFile()
+  relations_file2 = codecs.open(relations_file2_.name, "r+w", "utf-8")
   
   widgets = ['Importing data from NavTeq Shapes: ', progressbar.Bar(marker=progressbar.AnimatedMarker()),
            ' ', progressbar.ETA()]
@@ -438,7 +617,7 @@ def main(argv):
   progress = progressbar.ProgressBar(widgets=widgets, maxval=maxval).start()
   progress.update(0)
   
-  processStreets(zlevels, rdms, cdms, shpfile, nodes_file, ways_file, progress, relations_file)
+  processStreets(zlevels, rdms, cdms, shpfile, nodes_file, ways_file, progress, relations_file, relations_file2)
   
   if not progress is None:
     progress.finish()
@@ -467,39 +646,89 @@ def main(argv):
   output_file.write('\n')
   output_file.flush()
   
+  nodes_file.flush()
   nodes_file.seek(0)
-  for line in nodes_file:
-    output_file.write(line)
-    progress.update(progress.currval + 1)
-    if random.random() > 0.7 :
-      output_file.flush()
+  while 1:
+    lines = nodes_file.readlines(1000)
+    if not lines: 
+      break
+    else:
+      for line in lines:
+        output_file.write(line)
+        progress.update(progress.currval + 1)
+        if random.random() > 0.8 :
+          output_file.flush()
   nodes_file.close()
   nodes_file_.close()
     
+  ways_file.flush()
   ways_file.seek(0)
-  for line in ways_file:
-    output_file.write(line)
-    progress.update(progress.currval + 1)
-    if random.random() > 0.7 :
-      output_file.flush()
+  while 1:
+    lines = ways_file.readlines(500)
+    if not lines: 
+      break
+    else:
+      for line in lines:
+        output_file.write(line)
+        progress.update(progress.currval + 1)
+        if random.random() > 0.8 :
+          output_file.flush()
   ways_file.close()
   ways_file_.close()
     
+  relations_file.flush()
   relations_file.seek(0)
-  for line in relations_file:
-    output_file.write(line)
-    progress.update(progress.currval + 1)
-    if random.random() > 0.7 :
-      output_file.flush()
+  while 1:
+    lines = relations_file.readlines(500)
+    if not lines: 
+      break
+    else:
+      for line in lines:
+        output_file.write(line)
+        progress.update(progress.currval + 1)
+        if random.random() > 0.8 :
+          output_file.flush()
   relations_file.close()
   relations_file_.close()
+    
+  relations_file2.flush()
+  relations_file2.seek(0)
+  while 1:
+    lines = relations_file2.readlines(500)
+    if not lines: 
+      break
+    else:
+      for line in lines:
+        output_file.write(line)
+        progress.update(progress.currval + 1)
+        if random.random() > 0.8 :
+          output_file.flush()
+      output_file.flush()
+  relations_file2.close()
+  relations_file2_.close()
       
   output_file.write(' </osm>')
   output_file.write('\n')
   output_file.flush()
   output_file.close()
   progress.finish()
+  
+  
+#Returns the angle between three points
+def angle(p1, p3, p2):
+    v1x = p1[0] - p3[0];
+    v1y = p1[1] - p3[1];
+    v2x = p2[0] - p3[0];
+    v2y = p2[1] - p3[1];
+
+    angle = (arctan2([v2y],[v2x]) - arctan2([v1y],[v1x]) );
+    angle = angle[0]
+
+    return angle;
+
       
 if __name__ == "__main__":
   options, remainder = getopt.getopt(sys.argv[1:], 'o:v', ['input-path=', 'help', 'output-file='])
   main(options)
+  
+__author__ = 'Maria Arias de Reyna'
