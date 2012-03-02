@@ -418,20 +418,6 @@ def processRDMS_divider(relations_file_, ways, streetsname, nodes_file_name):
         print "Error processing divider:"
         traceback.print_exc
   streets.close()
-      
-      
-for k in ways:
-  if k == way_id:
-    continue
-  way = ways[k]
-  if way[0] == node_a:
-    p1 = searchLatLon(nodes_file, street[1])
-    p2 = searchLatLon(nodes_file, node_a)
-    p3 = searchLatLon(nodes_file, way[1])
-    print p1
-    print p2
-    print p3
-    print angle(p1, p2, p3)
 
       
 def searchLatLon(nodes_file, node_id):
