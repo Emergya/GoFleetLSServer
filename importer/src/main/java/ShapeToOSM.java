@@ -29,7 +29,7 @@ public class ShapeToOSM {
 	/**
 	 * @param args
 	 */
-	public static void main(String[] args) {
+	public static void main(final String[] args) {
 
 		// Shapefile path
 		String fileName = args[0];
@@ -48,8 +48,20 @@ public class ShapeToOSM {
 		String way = "";
 		try {
 			// Make a temporal file to store the ways
-			File tempWays = File.createTempFile("tempWays", null);
-			File tempNodes = File.createTempFile("tempNodes", null);
+			final File tempWays = File.createTempFile("tempWays", null);
+			final File tempNodes = File.createTempFile("tempNodes", null);
+			final File tempRestrictions = File.createTempFile(
+					"tempRestrictions", null);
+
+			Thread t = new Thread() {
+				public void run() {
+					RestrictionReader.processRestrictions(args[2], args[3],
+							args[4], tempRestrictions);
+				};
+			};
+
+			t.start();
+
 			FileWriter frWays = new FileWriter(tempWays);
 			FileWriter frNodes = new FileWriter(tempNodes);
 			getNodesFromJunction(args[1], frNodes);
@@ -101,11 +113,15 @@ public class ShapeToOSM {
 			}
 			frWays.close();
 			frNodes.close();
-			
+
 			// Read temporal files to make osm file
-			File f = new File(args[2]);
-			writeOSMFile(tempWays, tempNodes, f);
-	
+			File f = new File(args[5]);
+			
+			while(t.isAlive())
+				Thread.sleep(5000);
+			
+			writeOSMFile(tempWays, tempNodes, tempRestrictions, f);
+
 			// Delete temporal file
 			tempWays.delete();
 			tempNodes.delete();
@@ -115,33 +131,42 @@ public class ShapeToOSM {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
-	
-	public static void writeOSMFile(File ways, File nodes, File fosm){
+
+	public static void writeOSMFile(File ways, File nodes, File restrictions,
+			File fosm) {
 		FileReader frTempWays;
 		FileReader frTempNodes;
+		FileReader frTempRestrictions;
 		FileWriter fwOSM;
 		String osmHeader = "<osm version='0.6' generator='TeleAtlas2OSM'>\n";
-		String osmTile = "</osm>";
+		String osmTail = "</osm>";
 		try {
 			// Open files
 			frTempWays = new FileReader(ways);
 			frTempNodes = new FileReader(nodes);
+			frTempRestrictions = new FileReader(restrictions);
 			fwOSM = new FileWriter(fosm);
-			
+
 			// Write osm header
 			fwOSM.write(osmHeader);
-			
+
 			// Write osm nodes
 			readToWrite(frTempNodes, fwOSM);
-			
+
 			// Write osm ways
 			readToWrite(frTempWays, fwOSM);
-			
-			// Write osm tile 
-			fwOSM.write(osmTile);
-			
+
+			// Write osm restrictions
+			readToWrite(frTempRestrictions, fwOSM);
+
+			// Write osm tile
+			fwOSM.write(osmTail);
+
 			// Close files
 			frTempWays.close();
 			frTempNodes.close();
@@ -150,14 +175,14 @@ public class ShapeToOSM {
 			e.printStackTrace();
 		}
 	}
-	
-	public static void readToWrite(FileReader fr, FileWriter fw){
+
+	public static void readToWrite(FileReader fr, FileWriter fw) {
 		BufferedReader br = null;
 		String linea;
-        try {
-        	br = new BufferedReader(fr);
-			while((linea=br.readLine())!=null)
-			   fw.write(linea);
+		try {
+			br = new BufferedReader(fr);
+			while ((linea = br.readLine()) != null)
+				fw.write(linea);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -208,7 +233,7 @@ public class ShapeToOSM {
 			e.printStackTrace();
 		} catch (Throwable e) {
 			e.printStackTrace();
-		}finally{
+		} finally {
 			try {
 				shapefilereader.close();
 				dbfilereader.close();
@@ -318,7 +343,8 @@ public class ShapeToOSM {
 		return way;
 	}
 
-	public static void writeNodes(FileWriter fw, long ref, String lat, String lon) {
+	public static void writeNodes(FileWriter fw, long ref, String lat,
+			String lon) {
 		try {
 			fw.write("<node id=\""
 					+ ref
