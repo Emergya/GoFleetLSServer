@@ -1,9 +1,34 @@
-import java.io.BufferedReader;
+package org.gofleet.importer.teleatlas;
+/**
+* Copyright (C) 2012, Emergya (http://www.emergya.com)
+*
+* @author <a href="mailto:marcos@emergya.com">Moisés Arcos Santiago</a>
+*
+* This file is part of GoFleetLS
+*
+* This software is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation; either version 2 of the License, or
+* (at your option) any later version.
+*
+* This software is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this library; if not, write to the Free Software
+* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+*
+* As a special exception, if you link this library with other files to
+* produce an executable, this library does not by itself cause the
+* resulting executable to be covered by the GNU General Public License.
+* This exception does not however invalidate any other reasons why the
+* executable file might be covered by the GNU General Public License.
+*/
 import java.io.File;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -13,63 +38,47 @@ import java.util.Map;
 import org.geotools.data.shapefile.ShpFiles;
 import org.geotools.data.shapefile.dbf.DbaseFileReader;
 import org.geotools.data.shapefile.dbf.DbaseFileReader.Row;
-import org.geotools.data.shapefile.shp.ShapefileException;
 import org.geotools.data.shapefile.shp.ShapefileReader;
 import org.geotools.data.shapefile.shp.ShapefileReader.Record;
 
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.MultiLineString;
-import com.vividsolutions.jts.geom.Point;
 
-public class ShapeToOSM {
-
+public class WayReader {
+	
 	private static long ref = 1;
-
+	
 	/**
-	 * @param args
+	 * Method processWays: write in a temporal file the ways in
+	 * a path
+	 * 
+	 * @param pathWays
+	 *            : String with the shapefile Networks path
+	 * @param tempWays
+	 *            : String with the file path to write the ways XML text
+	 * @param tempNodes
+	 *            : String with the file path to write the nodes XML text
+	 * 
 	 */
-	public static void main(final String[] args) {
-
-		// Shapefile path
-		String fileName = args[0];
-		// make a shapefile object
+	public static void processWays(String pathWays, File tempWays, File tempNodes){
 		ShpFiles shpFile = null;
 		boolean useMemoryMapped = false;
-		// To read Network attributes
-		DbaseFileReader dbfilereader = null;
-		// To read shape geometries
-		ShapefileReader shapefilereader = null;
 		GeometryFactory gf = new GeometryFactory();
 		Row rdb = null;
 		Record recordShapefile = null;
-		// Define a map object with the shape file attributes from way
-		Map<String, String> attributes = new HashMap<String, String>();
-		String way = "";
+		Map<String, String> attributes = null;
+		DbaseFileReader dbfilereader = null;
+		ShapefileReader shapefilereader = null;
+		FileWriter frWays = null;
+		FileWriter frNodes = null;
 		try {
-			// Make a temporal file to store the ways
-			final File tempWays = File.createTempFile("tempWays", null);
-			final File tempNodes = File.createTempFile("tempNodes", null);
-			final File tempRestrictions = File.createTempFile(
-					"tempRestrictions", null);
-
-			Thread t = new Thread() {
-				public void run() {
-					RestrictionReader.processRestrictions(args[2], args[3],
-							args[4], tempRestrictions);
-				};
-			};
-
-			t.start();
-
-			FileWriter frWays = new FileWriter(tempWays);
-			FileWriter frNodes = new FileWriter(tempNodes);
-			getNodesFromJunction(args[1], frNodes);
-			shpFile = new ShpFiles(fileName);
-			dbfilereader = new DbaseFileReader(shpFile, useMemoryMapped,
-					Charset.defaultCharset());
-			shapefilereader = new ShapefileReader(shpFile, true,
-					useMemoryMapped, gf);
+			// Open file
+			frWays = new FileWriter(tempWays);
+			frNodes = new FileWriter(tempNodes);
+			shpFile = new ShpFiles(pathWays);
+			dbfilereader = new DbaseFileReader(shpFile, useMemoryMapped,Charset.defaultCharset());
+			shapefilereader = new ShapefileReader(shpFile, true,useMemoryMapped, gf);
 			String lon = "";
 			String lat = "";
 			while (dbfilereader.hasNext() || shapefilereader.hasNext()) {
@@ -95,7 +104,7 @@ public class ShapeToOSM {
 							nodes.add(node);
 							// Add to tempNodes file
 							if (tempNodes.exists()) {
-								writeNodes(frNodes, ref, lat, lon);
+								NodeReader.writeNodes(frNodes, ref, lat, lon);
 							}
 							ref++;
 						}
@@ -104,137 +113,20 @@ public class ShapeToOSM {
 				// check way restrictions
 				if (!attributes.get("FRC").equals("-1")
 						&& !attributes.get("ONEWAY").equals("N")) {
-					way = writeWay(attributes, nodes);
+					String way = writeWay(attributes, nodes);
 					if (tempWays.exists()) {
 						frWays.write(way);
 					}
 				}
-
 			}
-			frWays.close();
-			frNodes.close();
-
-			// Read temporal files to make osm file
-			File f = new File(args[5]);
-			
-			while(t.isAlive())
-				Thread.sleep(5000);
-			
-			writeOSMFile(tempWays, tempNodes, tempRestrictions, f);
-
-			// Delete temporal file
-			tempWays.delete();
-			tempNodes.delete();
-		} catch (MalformedURLException e) {
-			e.printStackTrace();
-		} catch (ShapefileException e) {
-			e.printStackTrace();
+			frNodes.flush();
+			frWays.flush();
 		} catch (IOException e) {
 			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-
-	public static void writeOSMFile(File ways, File nodes, File restrictions,
-			File fosm) {
-		FileReader frTempWays;
-		FileReader frTempNodes;
-		FileReader frTempRestrictions;
-		FileWriter fwOSM;
-		String osmHeader = "<osm version='0.6' generator='TeleAtlas2OSM'>\n";
-		String osmTail = "</osm>";
-		try {
-			// Open files
-			frTempWays = new FileReader(ways);
-			frTempNodes = new FileReader(nodes);
-			frTempRestrictions = new FileReader(restrictions);
-			fwOSM = new FileWriter(fosm);
-
-			// Write osm header
-			fwOSM.write(osmHeader);
-
-			// Write osm nodes
-			readToWrite(frTempNodes, fwOSM);
-
-			// Write osm ways
-			readToWrite(frTempWays, fwOSM);
-
-			// Write osm restrictions
-			readToWrite(frTempRestrictions, fwOSM);
-
-			// Write osm tile
-			fwOSM.write(osmTail);
-
-			// Close files
-			frTempWays.close();
-			frTempNodes.close();
-			fwOSM.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-
-	public static void readToWrite(FileReader fr, FileWriter fw) {
-		BufferedReader br = null;
-		String linea;
-		try {
-			br = new BufferedReader(fr);
-			while ((linea = br.readLine()) != null)
-				fw.write(linea);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-
-	// Method to read a file and get the middle nodes
-	public static void getNodesFromJunction(String path, FileWriter fw) {
-		Coordinate[] coordinates = null;
-		String lon = "";
-		String lat = "";
-		long id = 0;
-		ShpFiles shpFile = null;
-		boolean useMemoryMapped = false;
-		ShapefileReader shapefilereader = null;
-		DbaseFileReader dbfilereader = null;
-		GeometryFactory gf = new GeometryFactory();
-		try {
-			shpFile = new ShpFiles(path);
-			shapefilereader = new ShapefileReader(shpFile, true,
-					useMemoryMapped, gf);
-			dbfilereader = new DbaseFileReader(shpFile, useMemoryMapped,
-					Charset.defaultCharset());
-			while (shapefilereader.hasNext() || dbfilereader.hasNext()) {
-				Row rdb = dbfilereader.readRow();
-				String id_s = rdb.read(0).toString();
-				id = Long.valueOf(id_s);
-				Record recordShapefile = shapefilereader.nextRecord();
-				Object shape = recordShapefile.shape();
-				if (shape instanceof Point) {
-					coordinates = ((Point) shape).getCoordinates();
-					if (coordinates.length > 0) {
-						// The geometry have more than 2 elements
-						// (source/target)
-						for (int i = 0; i < coordinates.length; i++) {
-							lon = Double.toString(coordinates[i].x);
-							lat = Double.toString(coordinates[i].y);
-							// Add to tempNodes file
-							writeNodes(fw, id, lat, lon);
-						}
-					}
-				}
-			}
-		} catch (MalformedURLException e) {
-			e.printStackTrace();
-		} catch (ShapefileException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (Throwable e) {
-			e.printStackTrace();
-		} finally {
+		}finally {
 			try {
+				frWays.close();
+				frNodes.close();
 				shapefilereader.close();
 				dbfilereader.close();
 			} catch (IOException e) {
@@ -242,8 +134,14 @@ public class ShapeToOSM {
 			}
 		}
 	}
-
-	// Method to get Network attributes from a Network shape
+	
+	/**
+	 * Method getAttributesManeuvers: Method to get Network attributes from a Network shape
+	 * 
+	 * @param rdb: Row with the content of a shapefile Network line
+	 * @return Map<String, String>: Map with attributes from the row and its
+	 *         values
+	 */
 	public static Map<String, String> getAttributesNetwork(Row rdb) {
 		Map<String, String> attributes = new HashMap<String, String>();
 		try {
@@ -302,7 +200,14 @@ public class ShapeToOSM {
 		}
 		return attributes;
 	}
-
+	
+	/**
+	 * Method writeWay: return a string with the XML text to write a way in a OSM format
+	 * 
+	 * @param atributos: Map with the attributes value read from the Network shapefile
+	 * @param nodes: List with the nodes to add to the XML
+	 * @return String: String with the XML text
+	 */
 	public static String writeWay(Map<String, String> atributos,
 			List<String> nodes) {
 		String way = "<way";
@@ -342,24 +247,7 @@ public class ShapeToOSM {
 		way += "</way>\n";
 		return way;
 	}
-
-	public static void writeNodes(FileWriter fw, long ref, String lat,
-			String lon) {
-		try {
-			fw.write("<node id=\""
-					+ ref
-					+ "\" lat=\""
-					+ lat
-					+ "\" lon=\""
-					+ lon
-					+ "\""
-					+ " version=\"1\" changeset=\"1\" user=\"teleAtlas2osm\" uid=\"1\" visible=\"true\""
-					+ " timestamp=\"2007-01-28T11:40:26Z\"/>\n");
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-
+	
 	/**
 	 * Method getFRC: Get a osm format string with the FRC value
 	 * 
@@ -391,7 +279,7 @@ public class ShapeToOSM {
 		}
 		return frc;
 	}
-
+	
 	/**
 	 * Method getOneWay: Get a osm format string with the ONEWAY value
 	 * 
@@ -411,4 +299,5 @@ public class ShapeToOSM {
 		}
 		return oneway;
 	}
+
 }
