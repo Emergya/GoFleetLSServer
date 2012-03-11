@@ -1,11 +1,16 @@
 package org.gofleet.configuration;
 
+import javax.naming.Context;
 import javax.naming.InitialContext;
+import javax.naming.NameClassPair;
+import javax.naming.NamingEnumeration;
+import javax.naming.NamingException;
 
 import org.apache.commons.configuration.AbstractConfiguration;
 import org.apache.commons.configuration.CompositeConfiguration;
 import org.apache.commons.configuration.DatabaseConfiguration;
 import org.apache.commons.configuration.JNDIConfiguration;
+import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
@@ -51,6 +56,29 @@ public class Configuration {
 			} catch (Throwable t) {
 				log.error("Error loading jndi configuration", t);
 			}
+
+			try {
+				final PropertiesConfiguration configurator = new PropertiesConfiguration();
+				InitialContext icontext = new InitialContext();
+				Context context = (Context) icontext.lookup("java:comp/env");
+				NamingEnumeration<NameClassPair> propiedadesJDNI = context
+						.list("");
+				while (propiedadesJDNI.hasMoreElements()) {
+					NameClassPair propiety = propiedadesJDNI.nextElement();
+					configurator.addProperty(propiety.getName(),
+							context.lookup(propiety.getName()));
+					log.trace("Configuring '"
+							+ propiety.getName()
+							+ "' as '"
+							+ configurator.getString(propiety.getName()
+									.toString()) + "'");
+				}
+				configuration.addConfiguration(configurator);
+
+			} catch (NamingException e) {
+				log.error("Error loading configuration from context: " + e, e);
+			}
+
 		}
 
 		return configuration;
