@@ -1,31 +1,32 @@
 package org.gofleet.importer.teleatlas;
+
 /**
-* Copyright (C) 2012, Emergya (http://www.emergya.com)
-*
-* @author <a href="mailto:marcos@emergya.com">Moisés Arcos Santiago</a>
-*
-* This file is part of GoFleetLS
-*
-* This software is free software; you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation; either version 2 of the License, or
-* (at your option) any later version.
-*
-* This software is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this library; if not, write to the Free Software
-* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-*
-* As a special exception, if you link this library with other files to
-* produce an executable, this library does not by itself cause the
-* resulting executable to be covered by the GNU General Public License.
-* This exception does not however invalidate any other reasons why the
-* executable file might be covered by the GNU General Public License.
-*/
+ * Copyright (C) 2012, Emergya (http://www.emergya.com)
+ *
+ * @author <a href="mailto:marcos@emergya.com">Moisés Arcos Santiago</a>
+ *
+ * This file is part of GoFleetLS
+ *
+ * This software is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ *
+ * As a special exception, if you link this library with other files to
+ * produce an executable, this library does not by itself cause the
+ * resulting executable to be covered by the GNU General Public License.
+ * This exception does not however invalidate any other reasons why the
+ * executable file might be covered by the GNU General Public License.
+ */
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -46,12 +47,12 @@ import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.MultiLineString;
 
 public class WayReader {
-	
-	private static long ref = 1;
-	
+
+	private static long value = 57240000000000l;
+	private static Map<Long, Integer> idMap;
+
 	/**
-	 * Method processWays: write in a temporal file the ways in
-	 * a path
+	 * Method processWays: write in a temporal file the ways in a path
 	 * 
 	 * @param pathWays
 	 *            : String with the shapefile Networks path
@@ -61,7 +62,9 @@ public class WayReader {
 	 *            : String with the file path to write the nodes XML text
 	 * 
 	 */
-	public static void processWays(String pathWays, File tempWays, File tempNodes){
+	public static void processWays(String pathWays, File tempWays,
+			File tempNodes) {
+		idMap = NodeReader.getIDMap();
 		ShpFiles shpFile = null;
 		boolean useMemoryMapped = false;
 		GeometryFactory gf = new GeometryFactory();
@@ -77,10 +80,13 @@ public class WayReader {
 			frWays = new FileWriter(tempWays);
 			frNodes = new FileWriter(tempNodes);
 			shpFile = new ShpFiles(pathWays);
-			dbfilereader = new DbaseFileReader(shpFile, useMemoryMapped,Charset.defaultCharset());
-			shapefilereader = new ShapefileReader(shpFile, true,useMemoryMapped, gf);
+			dbfilereader = new DbaseFileReader(shpFile, useMemoryMapped,
+					Charset.defaultCharset());
+			shapefilereader = new ShapefileReader(shpFile, true,
+					useMemoryMapped, gf);
 			String lon = "";
 			String lat = "";
+			int idRef = idMap.size() + 1000;
 			while (dbfilereader.hasNext() || shapefilereader.hasNext()) {
 				// Define a list object with the lonlat nodes
 				List<String> nodes = new LinkedList<String>();
@@ -100,13 +106,13 @@ public class WayReader {
 							lon = Double.toString(geom[i].x);
 							lat = Double.toString(geom[i].y);
 							// Add to tempWays file
-							String node = "	<nd ref=\"" + ref + "\"/>\n";
+							String node = "	<nd ref=\"" + idRef + "\"/>\n";
 							nodes.add(node);
 							// Add to tempNodes file
 							if (tempNodes.exists()) {
-								NodeReader.writeNodes(frNodes, ref, lat, lon);
+								NodeReader.writeNodes(frNodes, idRef, lat, lon, 1);
 							}
-							ref++;
+							idRef++;
 						}
 					}
 				}
@@ -123,7 +129,7 @@ public class WayReader {
 			frWays.flush();
 		} catch (IOException e) {
 			e.printStackTrace();
-		}finally {
+		} finally {
 			try {
 				frWays.close();
 				frNodes.close();
@@ -134,11 +140,13 @@ public class WayReader {
 			}
 		}
 	}
-	
+
 	/**
-	 * Method getAttributesManeuvers: Method to get Network attributes from a Network shape
+	 * Method getAttributesManeuvers: Method to get Network attributes from a
+	 * Network shape
 	 * 
-	 * @param rdb: Row with the content of a shapefile Network line
+	 * @param rdb
+	 *            : Row with the content of a shapefile Network line
 	 * @return Map<String, String>: Map with attributes from the row and its
 	 *         values
 	 */
@@ -200,18 +208,24 @@ public class WayReader {
 		}
 		return attributes;
 	}
-	
+
 	/**
-	 * Method writeWay: return a string with the XML text to write a way in a OSM format
+	 * Method writeWay: return a string with the XML text to write a way in a
+	 * OSM format
 	 * 
-	 * @param atributos: Map with the attributes value read from the Network shapefile
-	 * @param nodes: List with the nodes to add to the XML
+	 * @param atributos
+	 *            : Map with the attributes value read from the Network
+	 *            shapefile
+	 * @param nodes
+	 *            : List with the nodes to add to the XML
 	 * @return String: String with the XML text
 	 */
 	public static String writeWay(Map<String, String> atributos,
 			List<String> nodes) {
 		String way = "<way";
-		way += " id=\"" + atributos.get("ID") + "\"";
+		long idWay = Long.valueOf(atributos.get("ID"));
+		idWay = idWay - value;
+		way += " id=\"" + idWay + "\"";
 		if (!atributos.containsKey("user")) {
 			way += " user=\"teleAtlas2osm\"";
 		}
@@ -228,17 +242,22 @@ public class WayReader {
 			way += " version=\"1\"";
 		}
 		if (!atributos.containsKey("changeset")) {
-			way += " changeset=\"1\"";
+			way += " changeset=\"0\"";
 		}
 		way += ">\n";
-		way += "	<nd ref=\"" + atributos.get("F_JNCTID") + "\"/>\n";
+		// Change the type of the id nodes, because it must be an Integer
+		String from_junct_id = atributos.get("F_JNCTID");
+		String to_junct_id = atributos.get("T_JNCTID");
+		Integer idValueFrom = idMap.get(from_junct_id);
+		Integer idValueTo = idMap.get(to_junct_id);
+		way += "	<nd ref=\"" + idValueFrom + "\"/>\n";
 		// Add the nodes from geometry
 		if (!nodes.isEmpty()) {
 			for (String s : nodes) {
 				way += s;
 			}
 		}
-		way += "	<nd ref=\"" + atributos.get("T_JNCTID") + "\"/>\n";
+		way += "	<nd ref=\"" + idValueTo + "\"/>\n";
 		String frc = getFRC(atributos.get("FRC"));
 		way += "	<tag k=\"highway\" v=\"" + frc + "\"/>\n";
 		way += "	<tag k=\"name\" v=\"" + atributos.get("NAME") + "\"/>\n";
@@ -247,7 +266,7 @@ public class WayReader {
 		way += "</way>\n";
 		return way;
 	}
-	
+
 	/**
 	 * Method getFRC: Get a osm format string with the FRC value
 	 * 
@@ -279,7 +298,7 @@ public class WayReader {
 		}
 		return frc;
 	}
-	
+
 	/**
 	 * Method getOneWay: Get a osm format string with the ONEWAY value
 	 * 

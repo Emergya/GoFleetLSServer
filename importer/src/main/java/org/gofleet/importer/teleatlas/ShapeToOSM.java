@@ -43,8 +43,6 @@ import org.geotools.data.shapefile.shp.ShapefileException;
 
 public class ShapeToOSM {
 
-	private static long ref = 1;
-
 	public static void main(final String[] args) {
 
 		try {
@@ -56,13 +54,19 @@ public class ShapeToOSM {
 					"tempNodesFromWays", null);
 			final File tempRestrictions = File.createTempFile(
 					"tempRestrictions", null);
+			
+			long timeNode = System.currentTimeMillis();
+			System.out.println("Start processNodes at: " + new Date(System.currentTimeMillis()));
+			NodeReader.processNodes(args[1], tempNodes);
+			System.out.println("Finished processNodes at: " + new Date(System.currentTimeMillis()));
+			System.out.println("Total Time in process nodes: " + (System.currentTimeMillis() - timeNode) / 1000 + " sec");
 
 			ExecutorService executor = Executors.newFixedThreadPool(10);
 
 			Thread t = new Thread() {
 				public void run() {
 					RestrictionReader.processRestrictions(args[2], args[3],
-							args[4], tempRestrictions);
+							args[4], tempRestrictions, args[6]);
 				};
 			};
 			
@@ -72,17 +76,17 @@ public class ShapeToOSM {
 				};
 			};
 
-			Thread tnode = new Thread() {
-				public void run() {
-					NodeReader.processNodes(args[1], tempNodes);
-				};
-			};
+//			Thread tnode = new Thread() {
+//				public void run() {
+//					NodeReader.processNodes(args[1], tempNodes);
+//				};
+//			};
 			
 			long time = System.currentTimeMillis();
 			System.out.println("Start at: " + new Date(System.currentTimeMillis()));
 			executor.execute(t);
 			executor.execute(tway);
-			executor.execute(tnode);
+			//executor.execute(tnode);
 			
 			executor.shutdown();
 		
@@ -100,6 +104,8 @@ public class ShapeToOSM {
 			// Delete temporal file
 			tempWays.delete();
 			tempNodes.delete();
+			tempNodesFromWays.delete();
+			tempRestrictions.delete();
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
 		} catch (ShapefileException e) {
@@ -160,8 +166,10 @@ public class ShapeToOSM {
 		String linea;
 		try {
 			br = new BufferedReader(fr);
-			while ((linea = br.readLine()) != null)
+			while ((linea = br.readLine()) != null){
 				fw.write(linea);
+				fw.write('\n');
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

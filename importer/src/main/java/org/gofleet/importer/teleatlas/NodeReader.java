@@ -29,13 +29,14 @@ package org.gofleet.importer.teleatlas;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.nio.charset.Charset;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.geotools.data.shapefile.ShpFiles;
 import org.geotools.data.shapefile.dbf.DbaseFileReader;
 import org.geotools.data.shapefile.dbf.DbaseFileReader.Row;
-import org.geotools.data.shapefile.shp.ShapefileException;
 import org.geotools.data.shapefile.shp.ShapefileReader;
 import org.geotools.data.shapefile.shp.ShapefileReader.Record;
 
@@ -45,6 +46,9 @@ import com.vividsolutions.jts.geom.Point;
 
 
 public class NodeReader {
+	
+	private static int idTemp = 1;
+	private static Map<Long, Integer> idMap = new HashMap<Long, Integer>();
 
 	/**
 	 * Method processNodes: write in a temporal file the nodes in
@@ -89,10 +93,12 @@ public class NodeReader {
 							lon = Double.toString(coordinates[i].x);
 							lat = Double.toString(coordinates[i].y);
 							// Add to tempNodes file
-							writeNodes(fw, id, lat, lon);
+							writeNodes(fw, idTemp, lat, lon, 0);
+							idMap.put(id, idTemp);
 						}
 					}
 				}
+				idTemp++;
 			}
 			fw.flush();
 		} catch (Throwable e) {
@@ -117,7 +123,7 @@ public class NodeReader {
 	 * @param lon: String with the longitude of the coordinate from a geometry
 	 */
 	public static void writeNodes(FileWriter fw, long ref, String lat,
-			String lon) {
+			String lon, int changeset) {
 		try {
 			fw.write("<node id=\""
 					+ ref
@@ -126,10 +132,19 @@ public class NodeReader {
 					+ "\" lon=\""
 					+ lon
 					+ "\""
-					+ " version=\"1\" changeset=\"1\" user=\"teleAtlas2osm\" uid=\"1\" visible=\"true\""
+					+ " version=\"1\" changeset=\"" + changeset + "\" user=\"teleAtlas2osm\" uid=\"1\" visible=\"true\""
 					+ " timestamp=\"2007-01-28T11:40:26Z\"/>\n");
 		} catch (Throwable e) {
 			e.printStackTrace();
 		}
+	}
+	/**
+	 * Method getIDMap: Method to make a hashmap to organize the id values
+	 * 
+	 * return Map<Long, Integer>: return a hashmap where the key is an id from Junction
+	 * and its corresponding temporal value in order to have an integer value 
+	 */
+	public static Map<Long, Integer> getIDMap(){
+		return Collections.synchronizedMap(idMap);
 	}
 }

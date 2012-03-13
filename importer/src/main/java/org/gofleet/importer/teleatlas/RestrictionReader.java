@@ -42,6 +42,8 @@ import org.geotools.data.shapefile.dbf.DbaseFileReader;
 import org.geotools.data.shapefile.dbf.DbaseFileReader.Row;
 
 public class RestrictionReader {
+	private static Map<Long, Integer> idMap;
+	private static long value = 57240000000000l;
 
 	/**
 	 * Method processRestrictions: write in a temporal file the restrictions in
@@ -58,7 +60,9 @@ public class RestrictionReader {
 	 * 
 	 */
 	public static void processRestrictions(String pathManeuvers,
-			String pathManeuversPath, String pathRestrictions, File file) {
+			String pathManeuversPath, String pathRestrictions, File file,
+			String min) {
+		idMap = NodeReader.getIDMap();
 		ShpFiles shpFile = null;
 		boolean useMemoryMapped = false;
 		Row rdb = null;
@@ -69,8 +73,9 @@ public class RestrictionReader {
 			// Open file
 			fw = new FileWriter(file);
 			shpFile = new ShpFiles(pathManeuvers);
-			dbfilereader = new DbaseFileReader(shpFile,
-					useMemoryMapped, Charset.defaultCharset());
+			dbfilereader = new DbaseFileReader(shpFile, useMemoryMapped,
+					Charset.defaultCharset());
+			int i = 10;
 			while (dbfilereader.hasNext()) {
 				rdb = dbfilereader.readRow();
 				attributes = getAttributesManeuvers(rdb);
@@ -78,25 +83,49 @@ public class RestrictionReader {
 				if (attributes.get("FEATTYP").equals("2103")
 						&& attributes.get("PROMANTYP").equals("0")) {
 					long id = Long.valueOf(attributes.get("ID"));
-					long junctID = Long.valueOf(attributes.get("JNCTID"));
+					// Change the long value by an Integer value
+					id = id - value;
+					long junctIDTemp = Long.valueOf(attributes.get("JNCTID"));
+					Integer junctID = idMap.get(junctIDTemp);
 					// Get from way and to way from maneuvers path index table
 					List<String> sequence = getSequence(id, pathManeuversPath);
-					String restrictions = getRestriction(id, pathRestrictions);
-					if (sequence.size() == 2) {
-						long from = Long.valueOf(sequence.get(0));
-						long to = Long.valueOf(sequence.get(1));
-						String rest = writeRestriction(id, junctID, from, to,
-								restrictions);
-						fw.write(rest);
-						fw.flush();
-					} // TODO length > 2
+					for (String restrictions : getRestriction(id,
+							pathRestrictions)) {
+						if (sequence.size() == 2) {
+							long from = Long.valueOf(sequence.get(0));
+							long to = Long.valueOf(sequence.get(1));
+							long minvalue = Long.valueOf(min.toString());
+							long idRes = id - minvalue;
+							String rest = writeRestriction(idRes, junctID,
+									from, to, restrictions);
+							fw.write(rest);
+							fw.flush();
+							i++;
+						} else {
+							// Change node to via
+							long from = Long.valueOf(sequence.get(0));
+							long to = Long
+									.valueOf(sequence.get(sequence.size() - 1));
+							long minvalue = Long.valueOf(min.toString());
+							long idRes = minvalue + i;
+							List<String> memberList = new LinkedList<String>();
+							for (int j = 1; j < sequence.size() - 1; j++) {
+								memberList.add(String.valueOf(sequence.get(j)));
+							}
+							String rest = writeRestrictionVia(idRes,
+									memberList, from, to, restrictions);
+							fw.write(rest);
+							fw.flush();
+							i++;
+						}
+					}
 				}
 			}
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
-		}finally {
+		} finally {
 			try {
 				fw.close();
 				dbfilereader.close();
@@ -110,7 +139,8 @@ public class RestrictionReader {
 	 * Method getAttributesManeuvers: Method to get Maneuvers attributes from a
 	 * Maneuvers shape
 	 * 
-	 * @param rdb: Row with the content of a shapefile Maneuvers line
+	 * @param rdb
+	 *            : Row with the content of a shapefile Maneuvers line
 	 * @return Map<String, String>: Map with attributes from the row and its
 	 *         values
 	 */
@@ -132,8 +162,11 @@ public class RestrictionReader {
 	 * Method getAttributesManeuversPath: Method to get Maneuvers_Path_Index
 	 * attributes from a Maneuvers_Path_Index shape
 	 * 
-	 * @param rdb: Row with the content of a shapefile Maneuvers_Path_Index line
-	 * @return Map<String, String>: Map with attributes from the row and its values
+	 * @param rdb
+	 *            : Row with the content of a shapefile Maneuvers_Path_Index
+	 *            line
+	 * @return Map<String, String>: Map with attributes from the row and its
+	 *         values
 	 */
 	private static Map<String, String> getAttributesManeuversPath(Row rdb) {
 		Map<String, String> attributes = new HashMap<String, String>();
@@ -149,11 +182,13 @@ public class RestrictionReader {
 	}
 
 	/**
-	 * Method getAttributesRestrictions: Method to get Restrictions
-	 * attributes from a Restrictions shape
+	 * Method getAttributesRestrictions: Method to get Restrictions attributes
+	 * from a Restrictions shape
 	 * 
-	 * @param rdb: Row with the content of a shapefile Restrictions line
-	 * @return Map<String, String>: Map with attributes from the row and its values
+	 * @param rdb
+	 *            : Row with the content of a shapefile Restrictions line
+	 * @return Map<String, String>: Map with attributes from the row and its
+	 *         values
 	 */
 	private static Map<String, String> getAttributesRestrictions(Row rdb) {
 		Map<String, String> attributes = new HashMap<String, String>();
@@ -169,18 +204,25 @@ public class RestrictionReader {
 		}
 		return attributes;
 	}
-	
+
 	/**
-	 * Method writeRestriction: return a string with the XML text to write a relation OSM
+	 * Method writeRestriction: return a string with the XML text to write a
+	 * relation OSM
 	 * 
-	 * @param idRestriction: long with the id restriction value read from the shapefile
-	 * @param junctID: long with the id node value read from the shapefile
-	 * @param from: long with the id from node value read from the shapefile
-	 * @param to: long with the id to node value read from the shapefile 
-	 * @param tags: String with the XML text to write every tag from the shapefile read
+	 * @param idRestriction
+	 *            : long with the id restriction value read from the shapefile
+	 * @param junctID
+	 *            : long with the id node value read from the shapefile
+	 * @param from
+	 *            : long with the id from node value read from the shapefile
+	 * @param to
+	 *            : long with the id to node value read from the shapefile
+	 * @param tags
+	 *            : String with the XML text to write every tag from the
+	 *            shapefile read
 	 * @return String: Text with the XML content of a relation OSM
 	 */
-	private static String writeRestriction(long idRestriction, long junctID,
+	private static String writeRestriction(long idRestriction, Integer junctID,
 			long from, long to, String tags) {
 		String relationHeader = "<relation changeset=\"1\" " + "uid=\"1\" "
 				+ "timestamp=\"2012-02-19T19:07:25Z\" " + "version=\"1\" "
@@ -200,17 +242,43 @@ public class RestrictionReader {
 		return relationHeader + memberWayFrom + memberWayTo + memberNode
 				+ tagType + tags + relationTail;
 	}
-	
+
+	private static String writeRestrictionVia(long idRes,
+			List<String> memberList, long from, long to, String tags) {
+		String relationHeader = "<relation changeset=\"0\" " + "uid=\"1\" "
+				+ "timestamp=\"2012-02-19T19:07:25Z\" " + "version=\"1\" "
+				+ "user=\"TeleAtlas2OSM\" " + "id=\"" + idRes + "\">\n";
+
+		String memberWayFrom = "<member type=\"way\" ref=\"" + from
+				+ "\" role=\"from\"/>\n";
+
+		String memberWayTo = "<member type=\"way\" ref=\"" + to
+				+ "\" role=\"to\"/>\n";
+		String memberNode = "";
+		for (String idVia : memberList) {
+			memberNode += "<member type=\"way\" " + "ref=\"" + idVia + "\" "
+					+ "role=\"via\"/>\n";
+		}
+		String relationTail = "</relation>\n";
+		String tagType = "<tag k=\"type\" v=\"restriction\"/>\n";
+		return relationHeader + memberWayFrom + memberWayTo + memberNode
+				+ tagType + tags + relationTail;
+	}
+
 	/**
 	 * Method writeTag: return a string with the XML text to write a Tag OSM
 	 * 
-	 * @param rt: String with the RESTTYP value
-	 * @param rv: String with the RESTVAL value
-	 * @param vt: String with the VT value
+	 * @param rt
+	 *            : String with the RESTTYP value
+	 * @param rv
+	 *            : String with the RESTVAL value
+	 * @param vt
+	 *            : String with the VT value
 	 * @return String: String qith XML text
 	 */
-	private static String writeTag(String rt, String rv, String vt) {
-		String value[] = new String[2];
+	private static List<String> writeTag(String rt, String rv, String vt) {
+		List<String> list = new LinkedList<String>();
+		List<String[]> value = null;
 		String tagRestriction = "";
 		String tagExcept = "";
 		if (rt.equals("6Z") || rt.equals("TR") || rt.equals("4B")) {
@@ -230,23 +298,28 @@ public class RestrictionReader {
 			} else if (rt.equals("DF") || rt.equals("6Q")) {
 				value = checkDF6Q(rv, vt);
 			}
-			if (value[0] != "") {
-				tagRestriction = "<tag k=\"restriction\" v =\"" + value[0]
-						+ "\"/>\n";
+			for (String[] val : value) {
+				if (val[0] != "") {
+					tagRestriction = "<tag k=\"restriction\" v =\"" + val[0]
+							+ "\"/>\n";
+				}
+				if (val[1] != "") {
+					tagExcept = "<tag k=\"except\" v=\"" + val[1] + "\"/>\n";
+				}
+				list.add(tagRestriction + tagExcept);
 			}
-			if (value[1] != "") {
-				tagExcept = "<tag k=\"except\" v=\"" + value[1] + "\"/>\n";
-			}
-
 		}
-		return tagRestriction + tagExcept;
+		return list;
 	}
 
 	/**
-	 * Method checkVT: Method to check the VT value and return the string with the equivalent OSM VT value 
+	 * Method checkVT: Method to check the VT value and return the string with
+	 * the equivalent OSM VT value
 	 * 
-	 * @param valueIN: String with the previous VT
-	 * @param vt: String with the VT read from the shapefile
+	 * @param valueIN
+	 *            : String with the previous VT
+	 * @param vt
+	 *            : String with the VT read from the shapefile
 	 * @return String: String with the OSM VT value
 	 */
 	private static String checkVT(String valueIN, String vt) {
@@ -294,56 +367,81 @@ public class RestrictionReader {
 	}
 
 	/**
-	 * Method checkBlank: Method to check if the RESTVALUE is blank, 
-	 * if is blank the OSM RESTVAL value should be 'no_straight_on'.
+	 * Method checkBlank: Method to check if the RESTVALUE is blank, if is blank
+	 * the OSM RESTVAL value should be 'no_straight_on'.
 	 * 
-	 * @param rv: String with the RESTVALUE value read from the shapefile
-	 * @param vt: String with the VT value read from the shapefile
-	 * @return String[]: String Array with the restriction tag value and the except tag value
+	 * @param rv
+	 *            : String with the RESTVALUE value read from the shapefile
+	 * @param vt
+	 *            : String with the VT value read from the shapefile
+	 * @return String[]: String Array with the restriction tag value and the
+	 *         except tag value
 	 */
-	private static String[] checkBlank(String rv, String vt) {
+	private static List<String[]> checkBlank(String rv, String vt) {
+		List<String[]> list = new LinkedList<String[]>();
 		String value[] = new String[2];
 		value[0] = "no_straight_on";
 		value[1] = "";
 		// Check VT value
 		value[1] = checkVT(value[1], vt);
-		return value;
+		list.add(value);
+		return list;
 	}
 
 	/**
 	 * Method checkBlank: Method to check if the RESTVALUE is DF or 6Q
 	 * 
-	 * @param rv: String with the RESTVALUE value read from the shapefile
-	 * @param vt: String with the VT value read from the shapefile
-	 * @return String[]: String Array with the restriction tag value and the except tag value
+	 * @param rv
+	 *            : String with the RESTVALUE value read from the shapefile
+	 * @param vt
+	 *            : String with the VT value read from the shapefile
+	 * @return String[]: String Array with the restriction tag value and the
+	 *         except tag value
 	 */
-	private static String[] checkDF6Q(String rv, String vt) {
+	private static List<String[]> checkDF6Q(String rv, String vt) {
+		List<String[]> list = new LinkedList<String[]>();
 		String value[] = new String[2];
 		// Check RESTRVAL value
 		if (rv.equals("2")) {
 			value[0] = "no_entry";
 			value[1] = "";
+			// Check VT value
+			value[1] = checkVT(value[1], vt);
+			list.add(value);
 		} else if (rv.equals("3")) {
 			value[0] = "no_exit";
 			value[1] = "";
+			// Check VT value
+			value[1] = checkVT(value[1], vt);
+			list.add(value);
 		} else if (rv.equals("4")) {
-			// TODO Two restrictions
-			value[0] = "";
+			value[0] = "no_entry";
 			value[1] = "";
+			// Check VT value
+			value[1] = checkVT(value[1], vt);
+			list.add(value);
+			value = new String[2];
+			value[0] = "no_exit";
+			value[1] = "";
+			// Check VT value
+			value[1] = checkVT(value[1], vt);
+			list.add(value);
 		}
-		// Check VT value
-		value[1] = checkVT(value[1], vt);
-		return value;
+		return list;
 	}
 
 	/**
 	 * Method checkBlank: Method to check if the RESTVALUE is 8I
 	 * 
-	 * @param rv: String with the RESTVALUE value read from the shapefile
-	 * @param vt: String with the VT value read from the shapefile
-	 * @return String[]: String Array with the restriction tag value and the except tag value
+	 * @param rv
+	 *            : String with the RESTVALUE value read from the shapefile
+	 * @param vt
+	 *            : String with the VT value read from the shapefile
+	 * @return String[]: String Array with the restriction tag value and the
+	 *         except tag value
 	 */
-	private static String[] check8I(String rv, String vt) {
+	private static List<String[]> check8I(String rv, String vt) {
+		List<String[]> list = new LinkedList<String[]>();
 		String value[] = new String[2];
 		// Check RESTRVAL value
 		if (rv.equals("0")) {
@@ -355,33 +453,43 @@ public class RestrictionReader {
 		}
 		// Check VT value
 		value[1] = checkVT(value[1], vt);
-		return value;
+		list.add(value);
+		return list;
 	}
 
 	/**
 	 * Method checkBlank: Method to check if the RESTVALUE is SR
 	 * 
-	 * @param rv: String with the RESTVALUE value read from the shapefile
-	 * @param vt: String with the VT value read from the shapefile
-	 * @return String[]: String Array with the restriction tag value and the except tag value
+	 * @param rv
+	 *            : String with the RESTVALUE value read from the shapefile
+	 * @param vt
+	 *            : String with the VT value read from the shapefile
+	 * @return String[]: String Array with the restriction tag value and the
+	 *         except tag value
 	 */
-	private static String[] checkSR(String rv, String vt) {
+	private static List<String[]> checkSR(String rv, String vt) {
+		List<String[]> list = new LinkedList<String[]>();
 		String value[] = new String[2];
 		value[0] = "no_entry";
 		value[1] = "psv";
 		// Check VT value
 		value[1] = checkVT(value[1], vt);
-		return value;
+		list.add(value);
+		return list;
 	}
 
 	/**
 	 * Method checkBlank: Method to check if the RESTVALUE is RB
 	 * 
-	 * @param rv: String with the RESTVALUE value read from the shapefile
-	 * @param vt: String with the VT value read from the shapefile
-	 * @return String[]: String Array with the restriction tag value and the except tag value
+	 * @param rv
+	 *            : String with the RESTVALUE value read from the shapefile
+	 * @param vt
+	 *            : String with the VT value read from the shapefile
+	 * @return String[]: String Array with the restriction tag value and the
+	 *         except tag value
 	 */
-	private static String[] checkRB(String rv, String vt) {
+	private static List<String[]> checkRB(String rv, String vt) {
+		List<String[]> list = new LinkedList<String[]>();
 		String value[] = new String[2];
 		// Check RESTRVAL value
 		if (rv.equals("1") || rv.equals("3")) {
@@ -393,50 +501,60 @@ public class RestrictionReader {
 		}
 		// Check VT value
 		value[1] = checkVT(value[1], vt);
-		return value;
+		list.add(value);
+		return list;
 	}
 
 	/**
 	 * Method checkBlank: Method to check if the RESTVALUE is BP
 	 * 
-	 * @param rv: String with the RESTVALUE value read from the shapefile
-	 * @param vt: String with the VT value read from the shapefile
-	 * @return String[]: String Array with the restriction tag value and the except tag value
+	 * @param rv
+	 *            : String with the RESTVALUE value read from the shapefile
+	 * @param vt
+	 *            : String with the VT value read from the shapefile
+	 * @return String[]: String Array with the restriction tag value and the
+	 *         except tag value
 	 */
-	private static String[] checkBP(String rv, String vt) {
+	private static List<String[]> checkBP(String rv, String vt) {
+		List<String[]> list = new LinkedList<String[]>();
 		String value[] = new String[2];
 		// Check RESTRVAL value
 		if (rv.equals("11") || rv.equals("13") || rv.equals("23")) {
 			value[0] = "no_entry";
 			value[1] = "psv";
+
 		} else if (rv.equals("1") || rv.equals("2") || rv.equals("12")
 				|| rv.equals("22")) {
 			value[0] = "no_entry";
 			value[1] = "";
 		}
 		value[1] = checkVT(value[1], vt);
-
-		return value;
+		list.add(value);
+		return list;
 	}
 
 	/**
-	 * Method getSequence: Method to get the sequence of TRPLIDs in order 
-	 * o obtain the source and target way
+	 * Method getSequence: Method to get the sequence of TRPLIDs in order o
+	 * obtain the source and target way
 	 * 
-	 * @param id: long with the id restriction value to compare with the ManeuversPath id
-	 * @param path: String with the Maneuvers_Path_Index path 
-	 * @return List<String>: List with the ids from source and target ways 
+	 * @param id
+	 *            : long with the id restriction value to compare with the
+	 *            ManeuversPath id
+	 * @param path
+	 *            : String with the Maneuvers_Path_Index path
+	 * @return List<String>: List with the ids from source and target ways
 	 */
 	private static List<String> getSequence(long id, String path) {
 		List<String> trpelid = new LinkedList<String>();
 		ShpFiles shpFile = null;
 		boolean useMemoryMapped = false;
 		Row rdb = null;
+		DbaseFileReader dbfilereader = null;
 		Map<String, String> attributes = null;
 		try {
 			shpFile = new ShpFiles(path);
-			DbaseFileReader dbfilereader = new DbaseFileReader(shpFile,
-					useMemoryMapped, Charset.defaultCharset());
+			dbfilereader = new DbaseFileReader(shpFile, useMemoryMapped,
+					Charset.defaultCharset());
 			while (dbfilereader.hasNext()) {
 				rdb = dbfilereader.readRow();
 				attributes = getAttributesManeuversPath(rdb);
@@ -449,28 +567,39 @@ public class RestrictionReader {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
+		} finally {
+			try {
+				dbfilereader.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 
 		return trpelid;
 	}
 
 	/**
-	 * Method getRestriction: Method to get a XML text with the equivalent OSM tag value 
+	 * Method getRestriction: Method to get a XML text with the equivalent OSM
+	 * tag value
 	 * 
-	 * @param id: long with the id restriction value to compare with the ManeuversPath id
-	 * @param path: String with the Restrictions path 
+	 * @param id
+	 *            : long with the id restriction value to compare with the
+	 *            ManeuversPath id
+	 * @param path
+	 *            : String with the Restrictions path
 	 * @return
 	 */
-	private static String getRestriction(long id, String path) {
-		String rest = "";
+	private static List<String> getRestriction(long id, String path) {
+		List<String> rest = new LinkedList<String>();
 		ShpFiles shpFile = null;
 		boolean useMemoryMapped = false;
+		DbaseFileReader dbfilereader = null;
 		Row rdb = null;
 		Map<String, String> attributes = null;
 		try {
 			shpFile = new ShpFiles(path);
-			DbaseFileReader dbfilereader = new DbaseFileReader(shpFile,
-					useMemoryMapped, Charset.defaultCharset());
+			dbfilereader = new DbaseFileReader(shpFile, useMemoryMapped,
+					Charset.defaultCharset());
 			while (dbfilereader.hasNext()) {
 				rdb = dbfilereader.readRow();
 				attributes = getAttributesRestrictions(rdb);
@@ -483,7 +612,7 @@ public class RestrictionReader {
 						String resttyp = attributes.get("RESTRTYP");
 						String restval = attributes.get("RESTRVAL");
 						String vt = attributes.get("VT");
-						rest = writeTag(resttyp, restval, vt);
+						rest.addAll(writeTag(resttyp, restval, vt));
 					}
 				}
 			}
@@ -491,6 +620,12 @@ public class RestrictionReader {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
+		} finally {
+			try {
+				dbfilereader.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 		return rest;
 	}
