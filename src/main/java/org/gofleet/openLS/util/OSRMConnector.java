@@ -271,8 +271,8 @@ public class OSRMConnector {
 			MismatchedDimensionException, TransformException {
 		MathTransform transform = null;
 
-		LOG.info(targetCRS.toWKT());
-		LOG.info(sourceCRS.toWKT());
+		LOG.trace(targetCRS.toWKT());
+		LOG.trace(sourceCRS.toWKT());
 		
 		double precision = 5;
 		precision = Math.pow(10, -precision);
@@ -296,17 +296,20 @@ public class OSRMConnector {
 			int dlng = (((result & 1) != 0) ? ~(result >> 1) : (result >> 1));
 			lng += dlng;
 
-			Coordinate coord = new Coordinate(lng * precision, lat * precision);
+			Coordinate coord = new Coordinate(lat * precision, lng * precision);
 			Point sourceGeometry = gf.createPoint(coord);
+			LOG.info(sourceGeometry);
 			if (sourceCRS != targetCRS) {
 				if (transform == null)
 					transform = CRS.findMathTransform(sourceCRS, targetCRS);
 				sourceGeometry = JTS.transform(sourceGeometry, transform)
 						.getCentroid();
+				LOG.info(sourceGeometry);
 			}
 			DirectPositionListType e = new DirectPositionListType();
-			e.getValue().add(coord.x);
-			e.getValue().add(coord.y);
+			e.getValue().add(sourceGeometry.getY());
+			e.getValue().add(sourceGeometry.getX());
+			
 
 			JAXBElement<DirectPositionListType> elem = new JAXBElement<DirectPositionListType>(
 					new QName("http://www.opengis.net/gml", "pos", "gml"),

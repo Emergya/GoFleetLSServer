@@ -224,6 +224,7 @@ public class GeoUtil {
 				.createPoint(new Coordinate(ctype.getValue().get(0), ctype
 						.getValue().get(1)));
 
+		LOG.info(p);
 		if (targetCRS != null && !sourceCRS.equals(targetCRS)) {
 			try {
 				MathTransform transform = CRS.findMathTransform(sourceCRS,
@@ -232,7 +233,7 @@ public class GeoUtil {
 
 				p = geomFact.createPoint(new Coordinate(p.getY(), p.getX()));
 
-				LOG.trace("(" + p.getX() + ", " + p.getY() + ")");
+				LOG.info(p);
 			} catch (Throwable t) {
 				LOG.error("Error converting coordinates", t);
 			}

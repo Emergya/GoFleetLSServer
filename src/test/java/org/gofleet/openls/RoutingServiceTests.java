@@ -13,7 +13,6 @@ import javax.xml.stream.FactoryConfigurationError;
 import javax.xml.stream.XMLStreamException;
 
 import net.opengis.gml.v_3_1_1.DirectPositionListType;
-import net.opengis.gml.v_3_1_1.DirectPositionType;
 import net.opengis.xls.v_1_2_0.AbstractBodyType;
 import net.opengis.xls.v_1_2_0.AbstractResponseParametersType;
 import net.opengis.xls.v_1_2_0.DetermineRouteResponseType;
@@ -21,14 +20,24 @@ import net.opengis.xls.v_1_2_0.ResponseType;
 import net.opengis.xls.v_1_2_0.RouteGeometryType;
 import net.opengis.xls.v_1_2_0.XLSType;
 
+import org.geotools.geometry.jts.JTS;
+import org.geotools.referencing.CRS;
 import org.gofleet.openLS.OpenLS;
 import org.gofleet.openLS.util.Utils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.opengis.geometry.MismatchedDimensionException;
+import org.opengis.referencing.FactoryException;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.opengis.referencing.operation.TransformException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.xml.sax.SAXException;
+
+import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.GeometryFactory;
+import com.vividsolutions.jts.geom.Point;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = { "classpath:applicationContext.xml" })
@@ -121,5 +130,31 @@ public class RoutingServiceTests {
 		JAXBElement<XLSType> convertFile2XLSType = Utils.convertFile2XLSType(
 				"/determineRouteRequestSRS.xml", XLSType.class);
 		assertNotNull(openLS.openLS(convertFile2XLSType));
+	}
+
+	@Test
+	public void testSRS() throws FileNotFoundException, JAXBException,
+			XMLStreamException, FactoryConfigurationError, SAXException,
+			MismatchedDimensionException, TransformException, FactoryException {
+
+		GeometryFactory gf = new GeometryFactory();
+
+		CoordinateReferenceSystem sourceCRS = CRS.decode("EPSG:4326");
+		CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:23030");
+		CRS.findMathTransform(sourceCRS, targetCRS);
+
+		Double y = -3.7091297753788;
+		Double x = 40.400858925754;
+
+		Point p = gf.createPoint(new Coordinate(x, y));
+		System.out.println(p);
+
+		p = JTS.transform(p, CRS.findMathTransform(sourceCRS, targetCRS))
+				.getCentroid();
+		System.out.println(p);
+		p = JTS.transform(p, CRS.findMathTransform(targetCRS, sourceCRS))
+				.getCentroid();
+		
+		System.out.println(p);
 	}
 }
