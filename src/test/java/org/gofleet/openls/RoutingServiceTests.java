@@ -42,7 +42,7 @@ public class RoutingServiceTests {
 			XMLStreamException, FactoryConfigurationError, SAXException {
 		JAXBElement<XLSType> convertFile2XLSType = Utils.convertFile2XLSType(
 				"/determineRouteRequest.xml", XLSType.class);
-		XLSType object = openLS.openLS(convertFile2XLSType).getValue();
+		XLSType object = openLS.openLS(convertFile2XLSType);
 
 		assertNotNull("Empty response", object);
 
@@ -120,6 +120,6 @@ public class RoutingServiceTests {
 			XMLStreamException, FactoryConfigurationError, SAXException {
 		JAXBElement<XLSType> convertFile2XLSType = Utils.convertFile2XLSType(
 				"/determineRouteRequestSRS.xml", XLSType.class);
-		assertNotNull(openLS.openLS(convertFile2XLSType).getValue());
+		assertNotNull(openLS.openLS(convertFile2XLSType));
 	}
 }

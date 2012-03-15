@@ -74,7 +74,7 @@ public class GeoCodingTest {
 			JAXBException, XMLStreamException, FactoryConfigurationError,
 			SAXException {
 		XLSType xls = openLS.openLS(Utils.convertFile2XLSType(
-				"/reverseGeocoding.xml", XLSType.class)).getValue();
+				"/reverseGeocoding.xml", XLSType.class));
 
 		assertNotNull("The response is null", xls);
 
@@ -130,7 +130,7 @@ public class GeoCodingTest {
 	public void testGeocoding() throws FileNotFoundException, JAXBException,
 			XMLStreamException, FactoryConfigurationError, SAXException {
 		XLSType object = openLS.openLS(Utils.convertFile2XLSType(
-				"/geocodingRequest.xml", XLSType.class)).getValue();
+				"/geocodingRequest.xml", XLSType.class));
 
 		XLSType xls = (XLSType) object;
 

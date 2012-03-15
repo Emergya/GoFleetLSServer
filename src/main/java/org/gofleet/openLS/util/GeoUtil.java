@@ -25,11 +25,8 @@ import org.apache.commons.logging.LogFactory;
 import org.geotools.geometry.jts.JTS;
 import org.geotools.referencing.CRS;
 import org.gofleet.openLS.ddbb.dao.GeoCodingDAO;
-import org.opengis.geometry.MismatchedDimensionException;
-import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opengis.referencing.operation.MathTransform;
-import org.opengis.referencing.operation.TransformException;
 import org.postgis.PGgeometry;
 import org.postgis.Point;
 import org.postgresql.jdbc4.Jdbc4Array;
@@ -219,6 +216,10 @@ public class GeoUtil {
 
 		CoordinateReferenceSystem sourceCRS = getSRS(startPoint);
 
+		LOG.trace(sourceCRS.toWKT());
+		LOG.trace("(" + ctype.getValue().get(0) + ", "
+				+ ctype.getValue().get(1) + ")");
+
 		com.vividsolutions.jts.geom.Point p = geomFact
 				.createPoint(new Coordinate(ctype.getValue().get(0), ctype
 						.getValue().get(1)));
@@ -228,6 +229,10 @@ public class GeoUtil {
 				MathTransform transform = CRS.findMathTransform(sourceCRS,
 						targetCRS);
 				p = JTS.transform(p, transform).getCentroid();
+
+				p = geomFact.createPoint(new Coordinate(p.getY(), p.getX()));
+
+				LOG.trace("(" + p.getX() + ", " + p.getY() + ")");
 			} catch (Throwable t) {
 				LOG.error("Error converting coordinates", t);
 			}

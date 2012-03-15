@@ -170,9 +170,9 @@ public class OSRMConnector {
 				url += "&via=" + point.getY() + "," + point.getX();
 			}
 
-			url += "&output=json&instructions=true";
+			url += "&z=15&output=json&geomformat=cmp&instructions=true";
 
-			LOG.debug(url);
+			LOG.info(url);
 
 			LineStringType lst = new LineStringType();
 
@@ -271,6 +271,9 @@ public class OSRMConnector {
 			MismatchedDimensionException, TransformException {
 		MathTransform transform = null;
 
+		LOG.info(targetCRS.toWKT());
+		LOG.info(sourceCRS.toWKT());
+		
 		double precision = 5;
 		precision = Math.pow(10, -precision);
 		int len = encoded.length(), index = 0, lat = 0, lng = 0;

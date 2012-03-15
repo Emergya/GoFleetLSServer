@@ -126,10 +126,10 @@ public class OpenLS {
 	 * @return
 	 */
 	@POST
-	@Produces(MediaType.TEXT_XML)
+	@Produces(MediaType.APPLICATION_XML)
 	@Consumes({ MediaType.APPLICATION_XML, MediaType.TEXT_XML,
 			MediaType.APPLICATION_ATOM_XML })
-	public JAXBElement<XLSType> openLS(JAXBElement<XLSType> jaxbelement) {
+	public XLSType openLS(JAXBElement<XLSType> jaxbelement) {
 		final XLSType parameter = jaxbelement.getValue();
 		LOG.trace("openLS(" + parameter + ")");
 		Locale localetmp = Locale.ROOT;
@@ -177,7 +177,7 @@ public class OpenLS {
 										resultado.add(response);
 									}
 								} catch (Throwable e) {
-									LOG.error(e, e);
+									LOG.error("Error answering request", e);
 									throw new RuntimeException(e);
 								}
 								return response;
@@ -194,8 +194,8 @@ public class OpenLS {
 		} catch (InterruptedException e) {
 			LOG.error(e, e);
 		}
+		return Utils.envelop(resultado, locale).getValue();
 
-		return Utils.envelop(resultado, locale);
 	}
 
 	/**
@@ -218,7 +218,6 @@ public class OpenLS {
 			else if (conn.equals("MONAV"))
 				arpt = monavConnector.routePlan(param);
 			else {
-
 				String host_port = configuration.get("OSRM_HOST",
 						"localhost:5000");
 				String http = "http";
