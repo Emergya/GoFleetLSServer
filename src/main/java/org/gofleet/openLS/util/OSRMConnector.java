@@ -58,6 +58,7 @@ import net.opengis.xls.v_1_2_0.WayPointType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
 import org.geotools.geometry.jts.JTS;
@@ -93,7 +94,8 @@ public class OSRMConnector {
 	private I18n i18n;
 
 	/**
-	 * @param i18n the i18n to set
+	 * @param i18n
+	 *            the i18n to set
 	 */
 	public void setI18n(I18n i18n) {
 		this.i18n = i18n;
@@ -161,16 +163,16 @@ public class OSRMConnector {
 
 			Point point = GeoUtil.getPoint(wayPointList.getStartPoint(),
 					sourceCRS);
-			url += "&start=" + point.getY() + "," + point.getX();
+			url += "?loc=" + point.getY() + "," + point.getX();
 			point = GeoUtil.getPoint(wayPointList.getEndPoint(), sourceCRS);
-			url += "&dest=" + point.getY() + "," + point.getX();
+			url += "&loc=" + point.getY() + "," + point.getX();
 
 			for (WayPointType wayPoint : wayPointList.getViaPoint()) {
 				point = GeoUtil.getPoint(wayPoint, sourceCRS);
-				url += "&via=" + point.getY() + "," + point.getX();
+				url += "&loc=" + point.getY() + "," + point.getX();
 			}
 
-			url += "&z=15&output=json&geomformat=cmp&instructions=true";
+			// url += "&geomformat=cmp";
 
 			LOG.info(url);
 
@@ -208,41 +210,11 @@ public class OSRMConnector {
 						}
 					}
 				} else if (jp.getCurrentName().equals("route_geometry")) {
-					String geometry = jp.getText();
-					decodeRouteGeometry(geometry,
-							lst.getPosOrPointPropertyOrPointRep(), targetCRS,
-							sourceCRS);
+					decodeRouteGeometry(lst.getPosOrPointPropertyOrPointRep(),
+							targetCRS, sourceCRS, jp);
 				} else if (jp.getCurrentName().equals("route_instructions")) {
-					while (jp.nextToken() == JsonToken.START_ARRAY
-							&& jp.getCurrentToken() != null) {
-						RouteInstructionType e = new RouteInstructionType();
-						jp.nextToken();
-						String instruction = i18n.getString(locale,
-								jp.getText());
-						jp.nextToken();
-						if (jp.getText().length() > 0)
-							instruction += " " + i18n.getString(locale, "on")
-									+ " " + jp.getText();
-						e.setInstruction(instruction);
-						jp.nextToken();
-
-						DistanceType distance = new DistanceType();
-						distance.setUom(DistanceUnitType.M);
-						distance.setValue(new BigDecimal(jp.getText()));
-						e.setDistance(distance);
-
-						jp.nextToken();
-
-						Duration duration = dataTypeFactory.newDuration(true,
-								0, 0, 0, 0, jp.getIntValue(), 0);
-						routeSummary.setTotalTime(duration);
-						e.setDuration(duration);
-
-						while (jp.nextToken() != JsonToken.END_ARRAY
-								&& jp.getCurrentToken() != null)
-							;
-						routeInstructionsList.getRouteInstruction().add(e);
-					}
+					processInstructions(locale, routeSummary,
+							routeInstructionsList, jp);
 				}
 				jp.nextToken();
 			}
@@ -264,39 +236,71 @@ public class OSRMConnector {
 		return res;
 	}
 
-	private List<JAXBElement<?>> decodeRouteGeometry(String encoded,
-			List<JAXBElement<?>> list, CoordinateReferenceSystem targetCRS,
-			CoordinateReferenceSystem sourceCRS)
+	/**
+	 * @param locale
+	 * @param routeSummary
+	 * @param routeInstructionsList
+	 * @param jp
+	 * @throws IOException
+	 * @throws JsonParseException
+	 */
+	public void processInstructions(Locale locale,
+			RouteSummaryType routeSummary,
+			RouteInstructionsListType routeInstructionsList, JsonParser jp)
+			throws IOException, JsonParseException {
+		while (jp.nextToken() == JsonToken.START_ARRAY
+				&& jp.getCurrentToken() != null) {
+			RouteInstructionType e = new RouteInstructionType();
+			jp.nextToken();
+			String instruction = i18n.getString(locale, jp.getText());
+			jp.nextToken();
+			if (jp.getText().length() > 0)
+				instruction += " " + i18n.getString(locale, "on") + " "
+						+ jp.getText();
+			e.setInstruction(instruction);
+			jp.nextToken();
+
+			DistanceType distance = new DistanceType();
+			distance.setUom(DistanceUnitType.M);
+			distance.setValue(new BigDecimal(jp.getText()));
+			e.setDistance(distance);
+
+			jp.nextToken();
+
+			Duration duration = dataTypeFactory.newDuration(true, 0, 0, 0, 0,
+					jp.getIntValue(), 0);
+			routeSummary.setTotalTime(duration);
+			e.setDuration(duration);
+
+			while (jp.nextToken() != JsonToken.END_ARRAY
+					&& jp.getCurrentToken() != null)
+				;
+			routeInstructionsList.getRouteInstruction().add(e);
+		}
+	}
+
+	private List<JAXBElement<?>> decodeRouteGeometry(List<JAXBElement<?>> list,
+			CoordinateReferenceSystem targetCRS,
+			CoordinateReferenceSystem sourceCRS, JsonParser jp)
 			throws NoSuchAuthorityCodeException, FactoryException,
-			MismatchedDimensionException, TransformException {
+			MismatchedDimensionException, TransformException,
+			JsonParseException, IOException {
+
 		MathTransform transform = null;
 
 		LOG.trace(targetCRS.toWKT());
 		LOG.trace(sourceCRS.toWKT());
-		
-		double precision = 5;
-		precision = Math.pow(10, -precision);
-		int len = encoded.length(), index = 0, lat = 0, lng = 0;
-		while (index < len) {
-			int b, shift = 0, result = 0;
-			do {
-				b = encoded.charAt(index++) - 63;
-				result |= (b & 0x1f) << shift;
-				shift += 5;
-			} while (b >= 0x20);
-			int dlat = (((result & 1) != 0) ? ~(result >> 1) : (result >> 1));
-			lat += dlat;
-			shift = 0;
-			result = 0;
-			do {
-				b = encoded.charAt(index++) - 63;
-				result |= (b & 0x1f) << shift;
-				shift += 5;
-			} while (b >= 0x20);
-			int dlng = (((result & 1) != 0) ? ~(result >> 1) : (result >> 1));
-			lng += dlng;
+		jp.nextToken();
 
-			Coordinate coord = new Coordinate(lat * precision, lng * precision);
+		while (jp.nextToken() == JsonToken.START_ARRAY
+				&& jp.getCurrentToken() != null) {
+			jp.nextToken();
+			Double lat = jp.getDoubleValue();
+			jp.nextToken();
+			Double lon = jp.getDoubleValue();
+			jp.nextToken();
+
+			Coordinate coord = new Coordinate(lat, lon);
 			Point sourceGeometry = gf.createPoint(coord);
 			LOG.info(sourceGeometry);
 			if (sourceCRS != targetCRS) {
@@ -309,13 +313,13 @@ public class OSRMConnector {
 			DirectPositionListType e = new DirectPositionListType();
 			e.getValue().add(sourceGeometry.getY());
 			e.getValue().add(sourceGeometry.getX());
-			
 
 			JAXBElement<DirectPositionListType> elem = new JAXBElement<DirectPositionListType>(
 					new QName("http://www.opengis.net/gml", "pos", "gml"),
 					DirectPositionListType.class, e);
 
 			list.add(elem);
+
 		}
 
 		return list;
