@@ -188,27 +188,15 @@ public class OSRMConnector {
 				String fieldname = jp.getCurrentName();
 				if (fieldname == null)
 					;
-				else if (fieldname.equals("route_summary")) {
-					if (jp.nextToken() == JsonToken.START_OBJECT
-							&& jp.getCurrentToken() != null) {
-						while (jp.nextToken() != JsonToken.END_OBJECT
-								&& jp.getCurrentToken() != null) {
-							if (jp.getCurrentName().equals("total_time")) {
-								jp.nextToken();
-								Duration duration = dataTypeFactory
-										.newDuration(true, 0, 0, 0, 0,
-												jp.getIntValue(), 0);
-								routeSummary.setTotalTime(duration);
-							} else if (jp.getCurrentName().equals(
-									"total_distance")) {
-								jp.nextToken();
-								DistanceType duration = new DistanceType();
-								duration.setUom(DistanceUnitType.M);
-								duration.setValue(new BigDecimal(jp.getText()));
-								routeSummary.setTotalDistance(duration);
-							}
-						}
-					}
+				else if (jp.getCurrentName().equals("total_distance")) {
+					DistanceType duration = new DistanceType();
+					duration.setUom(DistanceUnitType.M);
+					duration.setValue(new BigDecimal(jp.getText()));
+					routeSummary.setTotalDistance(duration);
+				} else if (jp.getCurrentName().equals("total_time")) {
+					Duration duration = dataTypeFactory.newDuration(true, 0, 0,
+							0, 0, 0, jp.getIntValue());
+					routeSummary.setTotalTime(duration);
 				} else if (jp.getCurrentName().equals("route_geometry")) {
 					decodeRouteGeometry(lst.getPosOrPointPropertyOrPointRep(),
 							targetCRS, sourceCRS, jp);
@@ -268,8 +256,7 @@ public class OSRMConnector {
 			jp.nextToken();
 
 			Duration duration = dataTypeFactory.newDuration(true, 0, 0, 0, 0,
-					jp.getIntValue(), 0);
-			routeSummary.setTotalTime(duration);
+					0, jp.getIntValue());
 			e.setDuration(duration);
 
 			while (jp.nextToken() != JsonToken.END_ARRAY
@@ -302,13 +289,13 @@ public class OSRMConnector {
 
 			Coordinate coord = new Coordinate(lat, lon);
 			Point sourceGeometry = gf.createPoint(coord);
-			LOG.info(sourceGeometry);
+			LOG.trace(sourceGeometry);
 			if (sourceCRS != targetCRS) {
 				if (transform == null)
 					transform = CRS.findMathTransform(sourceCRS, targetCRS);
 				sourceGeometry = JTS.transform(sourceGeometry, transform)
 						.getCentroid();
-				LOG.info(sourceGeometry);
+				LOG.trace(sourceGeometry);
 			}
 			DirectPositionListType e = new DirectPositionListType();
 			e.getValue().add(sourceGeometry.getY());
