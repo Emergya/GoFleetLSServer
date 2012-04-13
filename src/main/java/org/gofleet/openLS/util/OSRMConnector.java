@@ -164,13 +164,13 @@ public class OSRMConnector {
 			Point point = GeoUtil.getPoint(wayPointList.getStartPoint(),
 					sourceCRS);
 			url += "?loc=" + point.getY() + "," + point.getX();
-			point = GeoUtil.getPoint(wayPointList.getEndPoint(), sourceCRS);
-			url += "&loc=" + point.getY() + "," + point.getX();
 
 			for (WayPointType wayPoint : wayPointList.getViaPoint()) {
 				point = GeoUtil.getPoint(wayPoint, sourceCRS);
 				url += "&loc=" + point.getY() + "," + point.getX();
 			}
+			point = GeoUtil.getPoint(wayPointList.getEndPoint(), sourceCRS);
+			url += "&loc=" + point.getY() + "," + point.getX();
 
 			// url += "&geomformat=cmp";
 
