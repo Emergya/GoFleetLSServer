@@ -45,9 +45,11 @@ public class BackTrackingTSP implements TSPAlgorithm {
 	public List<TSPStop> order(TSPStopBag _bag) {
 		DistanceMatrix distances = new DistanceMatrix();
 
-		if (!(_bag instanceof BacktrackStopBag))
-			throw new RuntimeException(
-					"I need a BacktrackStopBag to operate. Please, feed me. Thank you so much. Sorry for the inconvenience.");
+		if (!(_bag instanceof BacktrackStopBag)) {
+			List<TSPStop> all = new LinkedList<TSPStop>();
+			all.addAll(_bag.getAll());
+			_bag = new BacktrackStopBag(all, _bag.getFirst(), _bag.getLast());
+		}
 
 		BacktrackStopBag bag = (BacktrackStopBag) _bag;
 		BackTrackSolution res = new BackTrackSolution(new Stack<TSPStop>());
