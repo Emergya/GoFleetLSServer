@@ -121,6 +121,7 @@ class BackTrackSolution {
 	private Double cachedDistance;
 
 	protected BackTrackSolution(Stack<TSPStop> res) {
+		this.cachedDistance = -1d;
 		this.res = res;
 	}
 
@@ -129,15 +130,18 @@ class BackTrackSolution {
 	}
 
 	protected void setStack(Stack<TSPStop> stack) {
+		this.cachedDistance = -1d;
 		this.res.clear();
 		this.res.addAll(stack);
 	}
 
 	protected TSPStop pop() {
+		this.cachedDistance = -1d;
 		return this.res.pop();
 	}
 
 	protected TSPStop push(TSPStop stop) {
+		this.cachedDistance = -1d;
 		return this.res.push(stop);
 	}
 
@@ -146,6 +150,10 @@ class BackTrackSolution {
 			this.cachedDistance = Double.MAX_VALUE;
 			return Double.MAX_VALUE;
 		}
+
+		if (this.cachedDistance > 0)
+			return this.cachedDistance;
+
 		Double cost = 0d;
 		TSPStop last = null;
 		for (TSPStop stop : this.res) {

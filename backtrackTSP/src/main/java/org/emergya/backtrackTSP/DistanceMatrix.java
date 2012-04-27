@@ -73,8 +73,9 @@ public class DistanceMatrix {
 
 	public Double distance(TSPStop from, TSPStop to) {
 		Key k = new Key(from.getId(), to.getId());
-		if (distances.containsKey(k)) {
-			return distances.get(k);
+		Double d = distances.get(k);
+		if (d != null) {
+			return d;
 		} else {
 			if (LOG.isDebugEnabled())
 				LOG.debug("DistanceMatrix.distance(" + k + ")");
