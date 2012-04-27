@@ -186,8 +186,8 @@ class Key {
 		if (!(obj instanceof Key))
 			return false;
 		Key other = (Key) obj;
-		return other.getFrom().equals(this.getFrom())
-				&& other.getTo().equals(this.getTo());
+		return other.getFrom().equals(this.from)
+				&& other.getTo().equals(this.to);
 	}
 
 	@Override

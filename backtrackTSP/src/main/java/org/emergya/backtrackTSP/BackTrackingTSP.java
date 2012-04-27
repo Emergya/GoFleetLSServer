@@ -28,6 +28,7 @@
  */
 package org.emergya.backtrackTSP;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -74,8 +75,9 @@ public class BackTrackingTSP implements TSPAlgorithm {
 
 		Collection<TSPStop> all = bag.getAll();
 
-		if (all.size() > 0) {
-			List<TSPStop> candidates = new LinkedList<TSPStop>();
+		final int size = all.size();
+		if (size > 0) {
+			List<TSPStop> candidates = new ArrayList<TSPStop>(size);
 			candidates.addAll(all);
 
 			for (TSPStop stop : candidates) {
