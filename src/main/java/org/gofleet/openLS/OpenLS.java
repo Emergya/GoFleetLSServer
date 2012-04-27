@@ -33,10 +33,10 @@ import net.opengis.xls.v_1_2_0.XLSType;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.emergya.osrm.OSRM;
 import org.gofleet.openLS.ddbb.GeoCoding;
 import org.gofleet.openLS.ddbb.Routing;
 import org.gofleet.openLS.util.MoNaVConnector;
-import org.gofleet.openLS.util.OSRMConnector;
 import org.gofleet.openLS.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
@@ -81,7 +81,7 @@ public class OpenLS {
 	private Routing routingController;
 
 	@Resource
-	private OSRMConnector osrmConnector;
+	private OSRM osrmConnector;
 
 	@Resource
 	private GeoCoding geoCodingController;

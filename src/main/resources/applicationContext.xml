@@ -104,7 +104,7 @@
 	</bean>
 	
 	
-	<bean id="osrmConnector" class="org.gofleet.openLS.util.OSRMConnector">
+	<bean id="osrmConnector" class="org.emergya.osrm.OSRM">
 		<property name="i18n" ref="i18n" />
 	</bean>
 

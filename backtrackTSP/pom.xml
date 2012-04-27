@@ -7,6 +7,21 @@
 	<name>backtrackTSP</name>
 	<description>Backtracking solution for TSP. Simple and hard.</description>
 
+	<build>
+		<plugins>
+			<plugin>
+
+				<!-- Maven compiler plugin -->
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>1.6</source>
+					<target>1.6</target>
+					<optimize>true</optimize>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
 	<dependencies>
 		<!-- test dependencies -->
 		<dependency>
@@ -20,6 +35,12 @@
 		<dependency>
 			<groupId>org.emergya</groupId>
 			<artifactId>tsp</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.emergya</groupId>
+			<artifactId>osrm-connector</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
 

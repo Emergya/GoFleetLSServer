@@ -25,15 +25,15 @@
  * This exception does not however invalidate any other reasons why the
  * executable file might be covered by the GNU General Public License.
  */
-package org.gofleet.openLS.util;
+package org.emergya.osrm;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URL;
+import java.text.ParseException;
 import java.util.List;
 import java.util.Locale;
 
-import javax.ws.rs.core.MediaType;
 import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
 import javax.xml.datatype.DatatypeFactory;
@@ -76,17 +76,17 @@ import org.springframework.stereotype.Repository;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.Point;
-import com.vividsolutions.jts.io.ParseException;
 
 /**
  * @author marias
  * 
  */
+@SuppressWarnings("restriction")
 @Repository
-public class OSRMConnector {
+public class OSRM {
 
 	protected static final String EPSG_4326 = "EPSG:4326";
-	private static Log LOG = LogFactory.getLog(OSRMConnector.class);
+	private static Log LOG = LogFactory.getLog(OSRM.class);
 	private GeometryFactory gf = new GeometryFactory();
 	private DatatypeFactory dataTypeFactory = new com.sun.org.apache.xerces.internal.jaxp.datatype.DatatypeFactoryImpl();
 
@@ -101,7 +101,15 @@ public class OSRMConnector {
 		this.i18n = i18n;
 	}
 
-	public OSRMConnector() {
+	public OSRM() {
+	}
+
+	/**
+	 * To use outside spring context
+	 */
+	public OSRM(I18n i18n) {
+		this();
+		setI18n(i18n);
 	}
 
 	/**
@@ -161,8 +169,8 @@ public class OSRMConnector {
 			CoordinateReferenceSystem targetCRS = GeoUtil.getSRS(wayPointList
 					.getStartPoint());
 
-			Point point = GeoUtil.getPoint(wayPointList.getStartPoint(),
-					sourceCRS);
+			com.vividsolutions.jts.geom.Point point = GeoUtil.getPoint(
+					wayPointList.getStartPoint(), sourceCRS);
 			url += "?loc=" + point.getY() + "," + point.getX();
 
 			for (WayPointType wayPoint : wayPointList.getViaPoint()) {
@@ -172,9 +180,7 @@ public class OSRMConnector {
 			point = GeoUtil.getPoint(wayPointList.getEndPoint(), sourceCRS);
 			url += "&loc=" + point.getY() + "," + point.getX();
 
-			// url += "&geomformat=cmp";
-
-			LOG.info(url);
+			LOG.debug(url);
 
 			LineStringType lst = new LineStringType();
 
@@ -212,10 +218,11 @@ public class OSRMConnector {
 			res.setRouteGeometry(routeGeometry);
 			res.setRouteHandle(routeHandle);
 
-			if (param.getRouteInstructionsRequest() != null)
+			if (param.getRouteInstructionsRequest() != null) {
 				res.setRouteInstructionsList(routeInstructionsList);
-			res.getRouteInstructionsList().setFormat(MediaType.TEXT_PLAIN);
-			res.getRouteInstructionsList().setLang(locale.getLanguage());
+				res.getRouteInstructionsList().setFormat("text/plain");
+				res.getRouteInstructionsList().setLang(locale.getLanguage());
+			}
 			res.setRouteSummary(routeSummary);
 		} catch (Throwable t) {
 			LOG.error("Error generating route response: " + t, t);
@@ -240,11 +247,17 @@ public class OSRMConnector {
 				&& jp.getCurrentToken() != null) {
 			RouteInstructionType e = new RouteInstructionType();
 			jp.nextToken();
-			String instruction = i18n.getString(locale, jp.getText());
+			String instruction = jp.getText();
+			if (i18n != null)
+				instruction = i18n.getString(locale, jp.getText());
 			jp.nextToken();
-			if (jp.getText().length() > 0)
-				instruction += " " + i18n.getString(locale, "on") + " "
-						+ jp.getText();
+			if (jp.getText().length() > 0) {
+				if (i18n == null)
+					instruction += " on " + jp.getText();
+				else
+					instruction += " " + i18n.getString(locale, "on") + " "
+							+ jp.getText();
+			}
 			e.setInstruction(instruction);
 			jp.nextToken();
 

@@ -38,6 +38,12 @@
 			<version>1.7</version>
 		</dependency>
 
+
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.10</version>
+		</dependency>
 		<!-- Context (Spring) -->
 		<dependency>
 			<groupId>org.springframework</groupId>
