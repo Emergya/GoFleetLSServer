@@ -36,7 +36,7 @@ import com.vividsolutions.jts.geom.Point;
 
 public class BacktrackStop implements TSPStop {
 
-	private Integer id;
+	protected Integer id;
 	private Geometry position;
 
 	public Integer getId() {

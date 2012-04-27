@@ -158,7 +158,8 @@ class BackTrackSolution {
 		TSPStop last = null;
 		for (TSPStop stop : this.res) {
 			if (last != null) {
-				cost += distance.distance(last, stop);
+				cost += distance.distance((BacktrackStop) last,
+						(BacktrackStop) stop);
 			}
 			last = stop;
 		}

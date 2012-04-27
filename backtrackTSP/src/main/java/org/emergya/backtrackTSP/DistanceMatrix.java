@@ -71,8 +71,8 @@ public class DistanceMatrix {
 		this.configuration = configuration;
 	}
 
-	public Double distance(TSPStop from, TSPStop to) {
-		Key k = new Key(from.getId(), to.getId());
+	public Double distance(BacktrackStop from, BacktrackStop to) {
+		Key k = new Key(from.id, to.id);
 		Double d = distances.get(k);
 		if (d != null) {
 			return d;
@@ -183,24 +183,11 @@ class Key {
 
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
+		if (!(obj instanceof Key))
 			return false;
 		Key other = (Key) obj;
-		if (from == null) {
-			if (other.from != null)
-				return false;
-		} else if (!from.equals(other.from))
-			return false;
-		if (to == null) {
-			if (other.to != null)
-				return false;
-		} else if (!to.equals(other.to))
-			return false;
-		return true;
+		return other.getFrom().equals(this.getFrom())
+				&& other.getTo().equals(this.getTo());
 	}
 
 	@Override
