@@ -86,7 +86,8 @@ public class BackTrackingTSP implements TSPAlgorithm {
 						.getDistance(distances))) {
 					backtrack(current, bag, distances, best);
 				}
-				LOG.trace("Current: " + current);
+				if (LOG.isTraceEnabled())
+					LOG.trace("Current: " + current);
 
 				current.pop();
 				bag.addStop(stop);

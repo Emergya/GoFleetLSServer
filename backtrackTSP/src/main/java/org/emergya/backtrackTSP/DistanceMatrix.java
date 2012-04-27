@@ -71,47 +71,50 @@ public class DistanceMatrix {
 		this.configuration = configuration;
 	}
 
-	Double distance(TSPStop from, TSPStop to) {
+	public Double distance(TSPStop from, TSPStop to) {
 		Key k = new Key(from.getId(), to.getId());
-		LOG.debug("DistanceMatrix.distance(" + k + ")");
 		if (distances.containsKey(k)) {
 			return distances.get(k);
 		} else {
-			String host_port = "localhost:5000";
-			String http = "http";
-			if (configuration != null) {
-				if (configuration.get("OSRM_SSL", "off").equals("on"))
-					http = "https";
-				host_port = configuration.get("OSRM_HOST", "localhost:5000");
-			}
-			DetermineRouteRequestType param = new DetermineRouteRequestType();
+			if (LOG.isDebugEnabled())
+				LOG.debug("DistanceMatrix.distance(" + k + ")");
+			return calculateDistance(from, to, k);
+		}
+	}
 
-			if (param.getRoutePlan() == null)
-				param.setRoutePlan(new RoutePlanType());
+	private Double calculateDistance(TSPStop from, TSPStop to, Key k) {
+		String host_port = "localhost:5000";
+		String http = "http";
+		if (configuration != null) {
+			if (configuration.get("OSRM_SSL", "off").equals("on"))
+				http = "https";
+			host_port = configuration.get("OSRM_HOST", "localhost:5000");
+		}
+		DetermineRouteRequestType param = new DetermineRouteRequestType();
 
-			if (param.getRoutePlan().getWayPointList() == null)
-				param.getRoutePlan().setWayPointList(new WayPointListType());
+		if (param.getRoutePlan() == null)
+			param.setRoutePlan(new RoutePlanType());
 
-			WayPointListType waypointList = param.getRoutePlan()
-					.getWayPointList();
+		if (param.getRoutePlan().getWayPointList() == null)
+			param.getRoutePlan().setWayPointList(new WayPointListType());
 
-			WayPointType start = getWayPoint(from.getPosition());
-			WayPointType end = getWayPoint(to.getPosition());
+		WayPointListType waypointList = param.getRoutePlan().getWayPointList();
 
-			waypointList.setStartPoint(start);
-			waypointList.setEndPoint(end);
+		WayPointType start = getWayPoint(from.getPosition());
+		WayPointType end = getWayPoint(to.getPosition());
 
-			try {
-				DetermineRouteResponseType res = (DetermineRouteResponseType) osrm
-						.routePlan(param, host_port, http, Locale.ROOT);
-				final double cost = res.getRouteSummary().getTotalDistance().getValue()
-						.doubleValue();
-				distances.put(k, cost);
-				return cost;
-			} catch (Throwable e) {
-				LOG.error("Error extracting distance from " + from + " to "
-						+ to, e);
-			}
+		waypointList.setStartPoint(start);
+		waypointList.setEndPoint(end);
+
+		try {
+			DetermineRouteResponseType res = (DetermineRouteResponseType) osrm
+					.routePlan(param, host_port, http, Locale.ROOT);
+			double cost = res.getRouteSummary().getTotalDistance().getValue()
+					.doubleValue();
+			distances.put(k, cost);
+			return cost;
+		} catch (Throwable e) {
+			LOG.error("Error extracting distance from " + from + " to " + to, e);
 			return Double.MAX_VALUE;
 		}
 	}
