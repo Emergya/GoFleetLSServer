@@ -73,7 +73,10 @@ public class DistanceMatrix {
 
 	public Double distance(BacktrackStop from, BacktrackStop to) {
 		Key k = new Key(from.id, to.id);
-		Double d = distances.get(k);
+		Double d = null;
+		synchronized (distances) {
+			d = distances.get(k);
+		}
 		if (d != null) {
 			return d;
 		} else {
@@ -112,7 +115,9 @@ public class DistanceMatrix {
 					.routePlan(param, host_port, http, Locale.ROOT);
 			double cost = res.getRouteSummary().getTotalDistance().getValue()
 					.doubleValue();
-			distances.put(k, cost);
+			synchronized (distances) {
+				distances.put(k, cost);
+			}
 			return cost;
 		} catch (Throwable e) {
 			LOG.error("Error extracting distance from " + from + " to " + to, e);

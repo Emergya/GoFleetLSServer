@@ -33,6 +33,9 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Stack;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -55,6 +58,8 @@ public class BackTrackingTSP implements TSPAlgorithm {
 		BacktrackStopBag bag = (BacktrackStopBag) _bag;
 		BackTrackSolution res = new BackTrackSolution(new Stack<TSPStop>());
 
+		initializeMatrix(distances, bag);
+
 		if (bag.hasFirst()) {
 			res.push(bag.getFirst());
 		}
@@ -67,6 +72,31 @@ public class BackTrackingTSP implements TSPAlgorithm {
 
 		throw new RuntimeException(
 				"I'm embarrased, I was unable to find a solution.");
+	}
+
+	@SuppressWarnings("unchecked")
+	private void initializeMatrix(DistanceMatrix distances, BacktrackStopBag bag) {
+
+        Runtime runtime = Runtime.getRuntime();
+        int numthreads = runtime.availableProcessors() * 10;
+		
+		ExecutorService executor = Executors.newFixedThreadPool(numthreads);
+
+		List<BacktrackStop> candidates = new ArrayList<BacktrackStop>(
+				bag.size());
+		candidates.addAll((Collection<? extends BacktrackStop>) bag.getAll());
+
+		for (BacktrackStop from : candidates) {
+			executor.execute(new InitializeDistances(from, candidates,
+					distances));
+		}
+		executor.shutdown();
+		try {
+			executor.awaitTermination(10, TimeUnit.SECONDS);
+		} catch (InterruptedException e) {
+			LOG.error(e, e);
+		}
+
 	}
 
 	private BackTrackSolution backtrack(BackTrackSolution current,
@@ -116,66 +146,4 @@ public class BackTrackingTSP implements TSPAlgorithm {
 		return best;
 	}
 
-}
-
-class BackTrackSolution {
-	private Stack<TSPStop> res;
-	private Double cachedDistance;
-
-	protected BackTrackSolution(Stack<TSPStop> res) {
-		this.cachedDistance = -1d;
-		this.res = res;
-	}
-
-	protected Stack<TSPStop> getStack() {
-		return this.res;
-	}
-
-	protected void setStack(Stack<TSPStop> stack) {
-		this.cachedDistance = -1d;
-		this.res.clear();
-		this.res.addAll(stack);
-	}
-
-	protected TSPStop pop() {
-		this.cachedDistance = -1d;
-		return this.res.pop();
-	}
-
-	protected TSPStop push(TSPStop stop) {
-		this.cachedDistance = -1d;
-		return this.res.push(stop);
-	}
-
-	public Double getDistance(DistanceMatrix distance) {
-		if (this.res.size() == 0) {
-			this.cachedDistance = Double.MAX_VALUE;
-			return Double.MAX_VALUE;
-		}
-
-		if (this.cachedDistance > 0)
-			return this.cachedDistance;
-
-		Double cost = 0d;
-		TSPStop last = null;
-		for (TSPStop stop : this.res) {
-			if (last != null) {
-				cost += distance.distance((BacktrackStop) last,
-						(BacktrackStop) stop);
-			}
-			last = stop;
-		}
-
-		this.cachedDistance = cost;
-		return cost;
-	}
-
-	@Override
-	public String toString() {
-		String s = "[" + this.cachedDistance + ": ";
-		for (TSPStop stop : this.res)
-			s += stop.toString() + " ";
-		s += "]";
-		return s;
-	}
 }
