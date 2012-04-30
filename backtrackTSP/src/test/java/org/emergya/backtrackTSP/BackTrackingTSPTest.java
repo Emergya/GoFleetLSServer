@@ -118,7 +118,7 @@ public class BackTrackingTSPTest {
 		Double y = 37.5d;
 
 		int max = 4;
-		int numparadas = 15;
+		int numparadas = 20;
 
 		long totaltime = 0;
 
@@ -144,9 +144,68 @@ public class BackTrackingTSPTest {
 				totaltime += System.currentTimeMillis() - time;
 				assertNotNull(order);
 				assertTrue(order.size() == k);
+				// System.out.println(order);
 			}
-			System.out.println("Time for " + k + " stops: "
-					+ totaltime / k + "ms");
+			System.out.println("Time for " + k + " stops: " + (totaltime / max)
+					+ "ms");
+		}
+	}
+
+	@Test
+	public void performanceWithLast() {
+
+		Random r = new Random();
+		Double x = -4.6d;
+		Double y = 37.5d;
+
+		int max = 4;
+		int numparadas = 20;
+
+		for (int k = 3; k < numparadas; k++) {
+
+			long totaltime = 0;
+
+			for (int i = 0; i < max; i++) {
+
+				BackTrackingTSP backtracking = new BackTrackingTSP();
+				List<TSPStop> stops = new LinkedList<TSPStop>();
+
+				for (int j = 0; j < k - 2; j++)
+					stops.add(new BacktrackStop(j, gf
+							.createPoint(new Coordinate(x
+									+ (r.nextFloat() * ((r.nextBoolean()) ? -1
+											: 1)), y
+									+ (r.nextFloat() * ((r.nextBoolean()) ? -1
+											: 1))))));
+
+				BacktrackStopBag bag = new BacktrackStopBag(stops,
+						new BacktrackStop(k - 1,
+								gf.createPoint(new Coordinate(
+										x
+												+ (r.nextFloat() * ((r
+														.nextBoolean()) ? -1
+														: 1)), y
+												+ (r.nextFloat() * ((r
+														.nextBoolean()) ? -1
+														: 1))))),
+						new BacktrackStop(k,
+								gf.createPoint(new Coordinate(
+										x
+												+ (r.nextFloat() * ((r
+														.nextBoolean()) ? -1
+														: 1)), y
+												+ (r.nextFloat() * ((r
+														.nextBoolean()) ? -1
+														: 1))))));
+
+				long time = System.currentTimeMillis();
+				final List<TSPStop> order = backtracking.order(bag);
+				totaltime += System.currentTimeMillis() - time;
+				assertNotNull(order);
+				assertTrue(order.size() == k);
+			}
+			System.out.println("Time for " + k + " stops: " + (totaltime / max)
+					+ "ms");
 		}
 	}
 }

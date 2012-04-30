@@ -29,12 +29,10 @@
 package org.emergya.backtrackTSP;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
@@ -47,7 +45,7 @@ public class BackTrackingTSP implements TSPAlgorithm {
 	private static Log LOG = LogFactory.getLog(BackTrackingTSP.class);
 
 	private Boolean partialSolution = false;
-	private Integer seconds = 15;
+	private Integer seconds = 18;
 
 	public BackTrackingTSP() {
 	}
@@ -66,24 +64,48 @@ public class BackTrackingTSP implements TSPAlgorithm {
 	}
 
 	public List<TSPStop> order(TSPStopBag _bag) {
+		long time = System.currentTimeMillis();
 
 		DistanceMatrix distances = new DistanceMatrix();
 
 		initializeMatrix(distances, _bag);
 
 		Runtime runtime = Runtime.getRuntime();
-		int numthreads = runtime.availableProcessors() * 3;
+		int numthreads = runtime.availableProcessors() * 10;
 
-		ExecutorService executor = Executors.newFixedThreadPool(numthreads);
+		final ExecutorService executor = Executors
+				.newFixedThreadPool(numthreads);
 
-		List<BackTrackSolution> solutions = Collections
-				.synchronizedList(new LinkedList<BackTrackSolution>());
+		SolutionContainer solutions = new SolutionContainer(distances);
 
-		executor.execute(new Backtracking(_bag, distances, solutions));
+		if (_bag.size() > 7) {
+			if (_bag.hasLast()) {
+				run(executor, new AStar(_bag, distances, solutions));
+				run(executor, new HeuristicBacktracking(_bag, distances,
+						solutions));
+			} else {
+				for (TSPStop stop : _bag.getAll()) {
+					List<TSPStop> stops = new ArrayList<TSPStop>();
+					stops.addAll(_bag.getAll());
+					stops.remove(stop);
+
+					BacktrackStopBag bag = new BacktrackStopBag(stops,
+							_bag.getFirst(), stop);
+					run(executor, new AStar(bag, distances, solutions));
+					run(executor, new HeuristicBacktracking(bag, distances,
+							solutions));
+				}
+			}
+		}
+		run(executor, new Backtracking(_bag, distances, solutions));
 
 		executor.shutdown();
+
 		try {
-			executor.awaitTermination(this.seconds, TimeUnit.SECONDS);
+			if (!executor.awaitTermination(
+					this.seconds - (System.currentTimeMillis() - time) / 1000,
+					TimeUnit.SECONDS))
+				executor.shutdownNow();
 		} catch (InterruptedException e) {
 			if (!this.partialSolution) {
 				throw new RuntimeException(
@@ -94,34 +116,36 @@ public class BackTrackingTSP implements TSPAlgorithm {
 			}
 		}
 
-		if (solutions.size() > 0)
-			return getBest(solutions, distances, _bag.size());
-
-		throw new RuntimeException(
-				"Something went wrong. I couldn't find a solution."
-						+ "Have you tried giving me more time and "
-						+ "allowing me to produce partial solutions?");
+		return getBest(solutions, distances, _bag.size());
 	}
 
-	private List<TSPStop> getBest(List<BackTrackSolution> solutions,
-			DistanceMatrix distances, Integer size) {
-
-		List<TSPStop> res = null;
-		Double cost = Double.MAX_VALUE;
-
-		for (BackTrackSolution sol : solutions) {
-			if (sol.getDistance(distances) <= cost) {
-				if (size == sol.getStack().size()) {
-					cost = sol.getDistance(distances);
-					res = sol.getStack();
+	private void run(final ExecutorService executor, final Runnable aStar) {
+		final FutureTask<Boolean> task = new FutureTask<Boolean>(aStar, true);
+		executor.execute(task);
+		Thread t = new Thread() {
+			@Override
+			public void run() {
+				try {
+					task.get(BackTrackingTSP.this.seconds, TimeUnit.SECONDS);
+				} catch (Throwable e) {
 				}
 			}
-		}
-		if (res == null)
+
+		};
+		t.start();
+	}
+
+	private List<TSPStop> getBest(SolutionContainer solutions,
+			DistanceMatrix distances, Integer size) {
+
+		BackTrackSolution solution = solutions.getSolution();
+
+		if (solution == null)
 			throw new RuntimeException(
 					"I'm embarrased, I was unable to find a solution for you. "
 							+ "Please, forgive me. I am just a machine.");
-		return res;
+
+		return solution.getStack();
 
 	}
 
@@ -131,7 +155,6 @@ public class BackTrackingTSP implements TSPAlgorithm {
 	 * @param distances
 	 * @param bag
 	 */
-	@SuppressWarnings("unchecked")
 	private void initializeMatrix(DistanceMatrix distances, TSPStopBag bag) {
 
 		Runtime runtime = Runtime.getRuntime();
@@ -139,8 +162,10 @@ public class BackTrackingTSP implements TSPAlgorithm {
 
 		ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
-		List<BacktrackStop> candidates = new ArrayList<BacktrackStop>();
-		candidates.addAll((Collection<? extends BacktrackStop>) bag.getAll());
+		List<BacktrackStop> candidates = null;
+		candidates = new ArrayList<BacktrackStop>();
+		for (TSPStop stop : bag.getAll())
+			candidates.add((BacktrackStop) stop);
 
 		for (BacktrackStop from : candidates) {
 			executor.execute(new InitializeDistances(from, candidates,
@@ -148,9 +173,36 @@ public class BackTrackingTSP implements TSPAlgorithm {
 		}
 		executor.shutdown();
 		try {
-			executor.awaitTermination(5, TimeUnit.SECONDS);
+			executor.awaitTermination(6, TimeUnit.SECONDS);
 		} catch (InterruptedException e) {
 			LOG.error(e, e);
+		}
+	}
+}
+
+class SolutionContainer {
+	private BackTrackSolution solution = null;
+	private DistanceMatrix distances = null;
+
+	public SolutionContainer(DistanceMatrix distances) {
+		this.distances = distances;
+	}
+
+	public BackTrackSolution getSolution() {
+		synchronized (this) {
+			return this.solution;
+		}
+	}
+
+	public void add(BackTrackSolution solution) {
+		synchronized (this) {
+			if (this.solution == null)
+				this.solution = solution;
+			else {
+				if (this.solution.getDistance(distances) > solution
+						.getDistance(distances))
+					this.solution = solution;
+			}
 		}
 	}
 }

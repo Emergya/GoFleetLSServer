@@ -4,7 +4,7 @@ import java.util.Stack;
 
 import org.gofleet.openLS.tsp.TSPStop;
 
-class BackTrackSolution {
+class BackTrackSolution implements Cloneable {
 	private Stack<TSPStop> res;
 	private Double cachedDistance;
 
@@ -44,14 +44,15 @@ class BackTrackSolution {
 
 		Double cost = 0d;
 		TSPStop last = null;
-		for (TSPStop stop : this.res) {
-			if (last != null) {
-				cost += distance.distance((BacktrackStop) last,
-						(BacktrackStop) stop);
+		synchronized (this.res) {
+			for (TSPStop stop : this.res) {
+				if (last != null) {
+					cost += distance.distance((BacktrackStop) last,
+							(BacktrackStop) stop);
+				}
+				last = stop;
 			}
-			last = stop;
 		}
-
 		this.cachedDistance = cost;
 		return cost;
 	}
@@ -63,5 +64,10 @@ class BackTrackSolution {
 			s += stop.toString() + " ";
 		s += "]";
 		return s;
+	}
+
+	@Override
+	protected Object clone() {
+		return new BackTrackSolution(this.res);
 	}
 }

@@ -5,7 +5,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-class InitializeDistances extends Thread {
+public class InitializeDistances extends Thread {
 	private static Log LOG = LogFactory.getLog(InitializeDistances.class);
 
 	private BacktrackStop from;

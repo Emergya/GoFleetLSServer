@@ -17,10 +17,10 @@ class Backtracking extends Thread {
 	private BackTrackSolution current;
 	private BacktrackStopBag bag;
 	private DistanceMatrix distances;
-	private List<BackTrackSolution> best;
+	private SolutionContainer best;
 
 	public Backtracking(TSPStopBag _bag, DistanceMatrix distances,
-			List<BackTrackSolution> best) {
+			SolutionContainer best) {
 		this.current = initializeResBag(_bag);
 		this.bag = getBacktrackingBag(_bag);
 		this.distances = distances;
@@ -31,25 +31,49 @@ class Backtracking extends Thread {
 	public void run() {
 		BackTrackSolution solution = backtrack(this.current, this.bag,
 				this.distances, new BackTrackSolution(new Stack<TSPStop>()));
-		best.add(solution);
+		this.best.add(solution);
 	}
 
+	/**
+	 * Recursive main procedure
+	 * 
+	 * @param current
+	 * @param bag
+	 * @param distances
+	 * @param partialSolution
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
 	private BackTrackSolution backtrack(BackTrackSolution current,
 			BacktrackStopBag bag, DistanceMatrix distances,
-			BackTrackSolution best) {
+			BackTrackSolution partialSolution) {
 
-		Collection<TSPStop> all = bag.getAll();
+		Collection<? super TSPStop> all = bag.getAll();
 		if (all.size() > 0) {
 			List<TSPStop> candidates = null;
 			candidates = new ArrayList<TSPStop>();
-			candidates.addAll(all);
+			candidates.addAll((Collection<? extends TSPStop>) all);
+
+			// We try with all the candidates
 			for (TSPStop stop : candidates) {
 				bag.removeStop(stop);
 				current.push(stop);
 
-				if (!(best != null && current.getDistance(distances) > best
+				// If we already have a solution candidate, is the current way
+				// worse than it? If not, just use current solution as better
+				if (!(partialSolution != null && current.getDistance(distances) > partialSolution
 						.getDistance(distances))) {
-					backtrack(current, bag, distances, best);
+
+					// Maybe another thread found a better solution
+					if (partialSolution != null
+							&& this.best.getSolution() != null) {
+						if (partialSolution.getDistance(distances) < this.best
+								.getSolution().getDistance(distances))
+							partialSolution = (BackTrackSolution) this.best
+									.getSolution().clone();
+
+					}
+					backtrack(current, bag, distances, partialSolution);
 				}
 				if (LOG.isTraceEnabled())
 					LOG.trace("Current: " + current);
@@ -57,26 +81,26 @@ class Backtracking extends Thread {
 				current.pop();
 				bag.addStop(stop);
 			}
-		} else {
+		} else { // We have reached the end of the way
 			if (bag.hasLast()) {
 				current.push(bag.getLast());
 
-				if (current.getDistance(distances) < best
+				if (current.getDistance(distances) < partialSolution
 						.getDistance(distances)) {
-					best.setStack(current.getStack());
+					partialSolution.setStack(current.getStack());
 				}
 
 				current.pop();
 			} else {
-				if (current.getDistance(distances) < best
+				if (current.getDistance(distances) < partialSolution
 						.getDistance(distances)) {
-					best.setStack(current.getStack());
+					partialSolution.setStack(current.getStack());
 				}
 			}
 		}
 
-		best.getDistance(distances);
-		return best;
+		partialSolution.getDistance(distances);
+		return partialSolution;
 	}
 
 	private BackTrackSolution initializeResBag(TSPStopBag bag) {
@@ -90,7 +114,7 @@ class Backtracking extends Thread {
 
 	private BacktrackStopBag getBacktrackingBag(TSPStopBag _bag) {
 		List<TSPStop> all = new LinkedList<TSPStop>();
-		all.addAll(_bag.getAll());
+		all.addAll((Collection<? extends TSPStop>) _bag.getAll());
 		return new BacktrackStopBag(all, _bag.getFirst(), _bag.getLast());
 	}
 
