@@ -80,7 +80,7 @@ public class BackTrackingTSP implements TSPAlgorithm {
 
 		if (_bag.size() > 7) {
 			if (_bag.hasLast()) {
-				run(executor, new AStar(_bag, distances, solutions));
+				//run(executor, new AStar(_bag, distances, solutions));
 				run(executor, new HeuristicBacktracking(_bag, distances,
 						solutions));
 			} else {
@@ -91,7 +91,7 @@ public class BackTrackingTSP implements TSPAlgorithm {
 
 					BacktrackStopBag bag = new BacktrackStopBag(stops,
 							_bag.getFirst(), stop);
-					run(executor, new AStar(bag, distances, solutions));
+					//run(executor, new AStar(bag, distances, solutions));
 					run(executor, new HeuristicBacktracking(bag, distances,
 							solutions));
 				}
