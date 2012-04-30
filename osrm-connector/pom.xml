@@ -3,9 +3,21 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.emergya</groupId>
 	<artifactId>osrm-connector</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.1.0</version>
 	<name>osrm-connector</name>
 	<description>Connector to OSRM routing</description>
+
+
+	<distributionManagement>
+		<snapshotRepository>
+			<id>gofleet</id>
+			<url>http://nexus.emergya.es/nexus/content/repositories/gofleet</url>
+		</snapshotRepository>
+		<repository>
+			<id>gofleet-snap</id>
+			<url>http://nexus.emergya.es/nexus/content/repositories/gofleet_releases</url>
+		</repository>
+	</distributionManagement>
 
 
 	<build>
