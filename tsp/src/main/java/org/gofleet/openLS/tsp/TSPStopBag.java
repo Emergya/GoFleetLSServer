@@ -1,5 +1,4 @@
 
-
 /**
  * Copyright (C) 2012, Emergya (http://www.emergya.es)
  * 
@@ -72,5 +71,13 @@ public interface TSPStopBag {
 	 * @return
 	 */
 	Boolean hasLast();
+
+	/**
+	 * Returns the number of stops the solution has to have (which means, the
+	 * total number of stops of this bag).
+	 * 
+	 * @return
+	 */
+	Integer size();
 
 }

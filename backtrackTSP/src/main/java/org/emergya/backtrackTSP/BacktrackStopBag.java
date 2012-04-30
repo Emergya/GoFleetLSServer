@@ -41,7 +41,8 @@ public class BacktrackStopBag implements TSPStopBag {
 
 	private TSPStop first = null;
 	private TSPStop last = null;
-	private List<TSPStop> bag = new ArrayList<TSPStop>();
+	private List<TSPStop> bag = Collections
+			.synchronizedList(new ArrayList<TSPStop>());
 
 	public TSPStop getFirst() {
 		return this.first;
@@ -74,32 +75,32 @@ public class BacktrackStopBag implements TSPStopBag {
 		this.last = last;
 	}
 
-	public void removeStop(TSPStop stop){
+	public void removeStop(TSPStop stop) {
 		this.bag.remove(stop);
 	}
 
-	public void addStop(TSPStop stop){
+	public void addStop(TSPStop stop) {
 		this.bag.add(stop);
 	}
 
-	public int size() {
-		int size = 0;
-		if(this.hasFirst())
+	public Integer size() {
+		Integer size = 0;
+		if (this.hasFirst())
 			size++;
-		if(this.hasLast())
+		if (this.hasLast())
 			size++;
 		return size + this.bag.size();
 	}
-	
+
 	@Override
 	public String toString() {
 		String s = "{";
-		
-		for(TSPStop stop : this.bag)
+
+		for (TSPStop stop : this.bag)
 			s += stop.getPosition().toText() + " ";
-		
+
 		s += "}";
-		
+
 		return s;
 	}
 }

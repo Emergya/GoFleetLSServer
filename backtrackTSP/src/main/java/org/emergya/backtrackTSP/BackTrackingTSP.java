@@ -30,9 +30,9 @@ package org.emergya.backtrackTSP;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Stack;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -46,44 +46,100 @@ import org.gofleet.openLS.tsp.TSPStopBag;
 public class BackTrackingTSP implements TSPAlgorithm {
 	private static Log LOG = LogFactory.getLog(BackTrackingTSP.class);
 
-	public List<TSPStop> order(TSPStopBag _bag) {
-		DistanceMatrix distances = new DistanceMatrix();
+	private Boolean partialSolution = false;
+	private Integer seconds = 15;
 
-		if (!(_bag instanceof BacktrackStopBag)) {
-			List<TSPStop> all = new LinkedList<TSPStop>();
-			all.addAll(_bag.getAll());
-			_bag = new BacktrackStopBag(all, _bag.getFirst(), _bag.getLast());
-		}
-
-		BacktrackStopBag bag = (BacktrackStopBag) _bag;
-		BackTrackSolution res = new BackTrackSolution(new Stack<TSPStop>());
-
-		initializeMatrix(distances, bag);
-
-		if (bag.hasFirst()) {
-			res.push(bag.getFirst());
-		}
-
-		BackTrackSolution best = backtrack(res, bag, distances,
-				new BackTrackSolution(new Stack<TSPStop>()));
-
-		if (best != null && best.getStack().size() == bag.size())
-			return best.getStack();
-
-		throw new RuntimeException(
-				"I'm embarrased, I was unable to find a solution.");
+	public BackTrackingTSP() {
 	}
 
-	@SuppressWarnings("unchecked")
-	private void initializeMatrix(DistanceMatrix distances, BacktrackStopBag bag) {
+	/**
+	 * If we cannot find a solution, do you like to get the best partial
+	 * solution reached?
+	 * 
+	 * @param partialSolution
+	 */
+	public BackTrackingTSP(Boolean partialSolution, Integer seconds) {
+		this();
+		if (partialSolution != null)
+			this.partialSolution = partialSolution;
+		this.seconds = seconds;
+	}
 
-        Runtime runtime = Runtime.getRuntime();
-        int numthreads = runtime.availableProcessors() * 10;
-		
+	public List<TSPStop> order(TSPStopBag _bag) {
+
+		DistanceMatrix distances = new DistanceMatrix();
+
+		initializeMatrix(distances, _bag);
+
+		Runtime runtime = Runtime.getRuntime();
+		int numthreads = runtime.availableProcessors() * 3;
+
 		ExecutorService executor = Executors.newFixedThreadPool(numthreads);
 
-		List<BacktrackStop> candidates = new ArrayList<BacktrackStop>(
-				bag.size());
+		List<BackTrackSolution> solutions = Collections
+				.synchronizedList(new LinkedList<BackTrackSolution>());
+
+		executor.execute(new Backtracking(_bag, distances, solutions));
+
+		executor.shutdown();
+		try {
+			executor.awaitTermination(this.seconds, TimeUnit.SECONDS);
+		} catch (InterruptedException e) {
+			if (!this.partialSolution) {
+				throw new RuntimeException(
+						"Timeout reached. I couldn't find a solution on a proper time. "
+								+ "Please, give me another chance with more time or"
+								+ " accept a partial solution. I won't fail you, I promise.",
+						e);
+			}
+		}
+
+		if (solutions.size() > 0)
+			return getBest(solutions, distances, _bag.size());
+
+		throw new RuntimeException(
+				"Something went wrong. I couldn't find a solution."
+						+ "Have you tried giving me more time and "
+						+ "allowing me to produce partial solutions?");
+	}
+
+	private List<TSPStop> getBest(List<BackTrackSolution> solutions,
+			DistanceMatrix distances, Integer size) {
+
+		List<TSPStop> res = null;
+		Double cost = Double.MAX_VALUE;
+
+		for (BackTrackSolution sol : solutions) {
+			if (sol.getDistance(distances) <= cost) {
+				if (size == sol.getStack().size()) {
+					cost = sol.getDistance(distances);
+					res = sol.getStack();
+				}
+			}
+		}
+		if (res == null)
+			throw new RuntimeException(
+					"I'm embarrased, I was unable to find a solution for you. "
+							+ "Please, forgive me. I am just a machine.");
+		return res;
+
+	}
+
+	/**
+	 * Initialices the distance matrix on background while tsp is running.
+	 * 
+	 * @param distances
+	 * @param bag
+	 */
+	@SuppressWarnings("unchecked")
+	private void initializeMatrix(DistanceMatrix distances, TSPStopBag bag) {
+
+		Runtime runtime = Runtime.getRuntime();
+		int numthreads = runtime.availableProcessors() * 3;
+
+		ExecutorService executor = Executors.newFixedThreadPool(numthreads);
+
+		List<BacktrackStop> candidates = new ArrayList<BacktrackStop>();
 		candidates.addAll((Collection<? extends BacktrackStop>) bag.getAll());
 
 		for (BacktrackStop from : candidates) {
@@ -92,58 +148,9 @@ public class BackTrackingTSP implements TSPAlgorithm {
 		}
 		executor.shutdown();
 		try {
-			executor.awaitTermination(10, TimeUnit.SECONDS);
+			executor.awaitTermination(5, TimeUnit.SECONDS);
 		} catch (InterruptedException e) {
 			LOG.error(e, e);
 		}
-
 	}
-
-	private BackTrackSolution backtrack(BackTrackSolution current,
-			BacktrackStopBag bag, DistanceMatrix distances,
-			BackTrackSolution best) {
-
-		Collection<TSPStop> all = bag.getAll();
-
-		final int size = all.size();
-		if (size > 0) {
-			List<TSPStop> candidates = new ArrayList<TSPStop>(size);
-			candidates.addAll(all);
-
-			for (TSPStop stop : candidates) {
-				bag.removeStop(stop);
-				current.push(stop);
-
-				if (!(best != null && current.getDistance(distances) > best
-						.getDistance(distances))) {
-					backtrack(current, bag, distances, best);
-				}
-				if (LOG.isTraceEnabled())
-					LOG.trace("Current: " + current);
-
-				current.pop();
-				bag.addStop(stop);
-			}
-		} else {
-			if (bag.hasLast()) {
-				current.push(bag.getLast());
-
-				if (current.getDistance(distances) < best
-						.getDistance(distances)) {
-					best.setStack(current.getStack());
-				}
-
-				current.pop();
-			} else {
-				if (current.getDistance(distances) < best
-						.getDistance(distances)) {
-					best.setStack(current.getStack());
-				}
-			}
-		}
-
-		best.getDistance(distances);
-		return best;
-	}
-
 }
