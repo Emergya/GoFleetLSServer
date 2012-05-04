@@ -44,7 +44,9 @@ public class Configuration {
 			configuration = new CompositeConfiguration();
 
 			try {
-				if (dataSource != null)
+				if (dataSource != null
+						&& dataSource.isAccessToUnderlyingConnectionAllowed()
+						&& !dataSource.isClosed())
 					configuration.addConfiguration(new DatabaseConfiguration(
 							dataSource, "configuration", "key", "value"));
 			} catch (Throwable t) {

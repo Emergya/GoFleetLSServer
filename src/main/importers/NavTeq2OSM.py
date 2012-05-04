@@ -76,8 +76,8 @@ def getNode(point, id_nodes):
 def writeWay(file, attrs, nodes, tags):
   
   if nodes is None:
-    if attrs.has_key('id'):
-      print "Way without nodes: " + str(attrs['id'])
+#    if attrs.has_key('id'):
+#      print "Way without nodes: " + str(attrs['id'])
     return
   
   #Write way to file
@@ -143,7 +143,7 @@ def printRelation(file, rid, source, target, via={}, tags={}, attrs={}):
     
   writeToFile(file,"  </relation>\n")  
   
-def processStreets(zlevels, rdms, cdms, shpfile, nodes_file, ways_file, progress, relations_file, relations_file_):
+def process(zlevels, rdms, cdms, shpfile, nodes_file, ways_file, progress, relations_file):
   
   ways = {}
   nodes = {}
@@ -161,6 +161,7 @@ def processStreets(zlevels, rdms, cdms, shpfile, nodes_file, ways_file, progress
     record = zlevels.shapeRecord(i)
     
     link_id = record.record[0]
+    
     level = record.record[3]
     
     #Nodes array saves nodes_id by coordinates and level
@@ -189,27 +190,50 @@ def processStreets(zlevels, rdms, cdms, shpfile, nodes_file, ways_file, progress
       
     #write node definition to file
     
-  nodes = None
+  link_id = None
+  node_key = None
   record = None
   node_cont = None
   node_id = None
-  
-  t2 = processRDMS(rdms, cleanCDMS(cdms, [3, 7, 8, 21]), relations_file, ways)
-  rdms = None
-  
-  t3 = processRDMS_divider(relations_file_, ways, shpfile.name, nodes_file.name)
-    
-  cdms = cleanCDMS(cdms, [2])
   cont = zlevels.numRecords
   zlevels = None
+  last_node_id = None
+  last_level = None
+  last_link_id = None
+  
+  t2 = processRDMS(rdms, cleanCDMS(cdms, [3, 7, 8, 21]), relations_file[0], ways)
+  rdms = rdms.close()
+  rdms = None
+  t7 = processVials(shpfile, progress, ways, ways_file, nodes, cleanCDMS(cdms, [2]), cont)
+  cdms.close()
+  cdms = None
+  
+  max = float(len(shpfile))
+  
+  t3 = processRDMS_divider(relations_file[1], ways, shpfile.name, nodes_file.name, progress, 0, round(max/4), 1)
+  t4 = processRDMS_divider(relations_file[2], ways, shpfile.name, nodes_file.name, progress, round(max/4) + 1, 2 * round(max/4), 2)
+  t5 = processRDMS_divider(relations_file[3], ways, shpfile.name, nodes_file.name, progress, 2 * round(max/4) + 1, 3 * round(max/4), 3)
+  t6 = processRDMS_divider(relations_file[4], ways, shpfile.name, nodes_file.name, progress, 3 * round(max/4) + 1, max, 4)
+  
+  shpfile = None
+  
+  t2.join()
+  t3.join()
+  t4.join()
+  t5.join()
+  t6.join()
+  t7.join()
+    
+    
+@run_async
+def processVials(shpfile, progress, ways, ways_file, nodes, cdms, cont):
   
   #Walking through all ways (vials)
   for i in range(0, len(shpfile)):
     try:
       progress.update(cont + i)
     except:
-      print "Couldn't update progressbar"
-      traceback.print_exc()
+      pass
     try:
       shpRecord = shpfile[i]
     except:
@@ -291,8 +315,8 @@ def processStreets(zlevels, rdms, cdms, shpfile, nodes_file, ways_file, progress
       if ways.has_key(way_id):
         nodes = ways[way_id]
         ways[way_id] = None
-      else:
-        print("Error: way (" + str(way_id) + ") without nodes!! i=" + str(i))
+     # else:
+     #   print("Error: way (" + str(way_id) + ") without nodes!! i=" + str(i))
       
       #Commented because it takes too long
       tags = getWayTags(cdms, way_id, tags)
@@ -305,8 +329,6 @@ def processStreets(zlevels, rdms, cdms, shpfile, nodes_file, ways_file, progress
   shpfile = None
   ways = None
   cdms = None
-  t2.join()
-  t3.join()
     
 #Instead of having to search through all the data, we just save in memory
 #the data we will be using.
@@ -356,22 +378,30 @@ def processRDMS(rdms, cdms, file, ways = {}):
     
       
 @run_async
-def processRDMS_divider(relations_file_, ways, streetsname, nodes_file_name):
+def processRDMS_divider(relations_file_, ways, streetsname, nodes_file_name, progress, min=0, max=1000, res_id=1):
   
-  res_id = 1
+  res_id = res_id * 1000000
   
   nodes_file = open(nodes_file_name, "r")
   streets = dbf.Dbf(streetsname, "r")
   while nodes_file: #Walking through all ways (vials)
-    for i in range(0, len(streets)):
+    for i in range(int(min), int(max)):
+      try:
+        progress.update(cont + i)
+      except:
+        pass
       try:
         street_ = streets[i]
       except:
-        print "Malformed Street [" + str(i) +"]"
+        pass
       try:
+        #print "id " +  str(street_[0])
         divider = street_[31]
         if divider == 'A' or divider == '1' or divider == '2':
+          #print "has divider"
           way_id = street_[0]
+          if not ways.has_key(way_id):
+            continue
           street = ways[way_id]
           node_a = street[0]
           node_b = street[len(ways[way_id]) - 1]
@@ -380,30 +410,31 @@ def processRDMS_divider(relations_file_, ways, streetsname, nodes_file_name):
               continue
             try:
               way = ways[k]
+              
               #We search for the angle of the intersections
               #If it is a left turn, it is forbidden
               if way[0] == node_a \
                           and angle(searchLatLon(nodes_file, street[1]), \
                                     searchLatLon(nodes_file, node_a), \
-                                    searchLatLon(nodes_file, way[1])) > 0:
+                                    searchLatLon(nodes_file, way[1])) < 0:
                 printRelation(relations_file_, res_id, k, way_id, {node_a: 'node'}, {'type': 'restriction', 'type': 'no_right_turn'})
                 res_id = res_id + 1
               elif way[len(way) - 1] == node_a \
                           and angle(searchLatLon(nodes_file, street[1]), \
                                     searchLatLon(nodes_file, node_b), \
-                                    searchLatLon(nodes_file, way[len(way) - 2])) > 0:
+                                    searchLatLon(nodes_file, way[len(way) - 2])) < 0:
                 printRelation(relations_file_, res_id, k, way_id, {node_b: 'node'}, {'type': 'restriction', 'type': 'no_right_turn'})
                 res_id = res_id + 1
               elif way[0] == node_b \
                           and angle(searchLatLon(nodes_file, street[len(street) - 2]), \
                                     searchLatLon(nodes_file, node_a), \
-                                    searchLatLon(nodes_file, way[1])) > 0:
+                                    searchLatLon(nodes_file, way[1])) < 0:
                 printRelation(relations_file_, res_id, k, way_id, {node_a: 'node'}, {'type': 'restriction', 'type': 'no_right_turn'})
                 res_id = res_id + 1
               elif way[len(way) - 1] == node_b \
                           and angle(searchLatLon(nodes_file, street[len(street) - 2]), \
                                     searchLatLon(nodes_file, node_b), \
-                                    searchLatLon(nodes_file, way[len(way) - 2])) > 0:
+                                    searchLatLon(nodes_file, way[len(way) - 2])) < 0:
                 printRelation(relations_file_, res_id, k, way_id, {node_b: 'node'}, {'type': 'restriction', 'type': 'no_right_turn'})
                 res_id = res_id + 1
             except AttributeError as ae:
@@ -416,14 +447,14 @@ def processRDMS_divider(relations_file_, ways, streetsname, nodes_file_name):
         traceback.print_exc()
       except:
         print "Error processing divider:"
-        traceback.print_exc
+        traceback.print_exc()
   streets.close()
 
       
 def searchLatLon(nodes_file, node_id):
   nodes_file.seek(0)
   while 1:
-    lines = nodes_file.readlines(400)
+    lines = nodes_file.readlines(100)
     if not lines:
       break
     for node in lines:
@@ -592,18 +623,21 @@ def main(argv):
   nodes_file = codecs.open(nodes_file_.name, "r+w", "utf-8")
   ways_file_ = tempfile.NamedTemporaryFile()
   ways_file = codecs.open(ways_file_.name, "r+w", "utf-8")
-  relations_file_ = tempfile.NamedTemporaryFile()
-  relations_file = codecs.open(relations_file_.name, "r+w", "utf-8")
-  relations_file2_ = tempfile.NamedTemporaryFile()
-  relations_file2 = codecs.open(relations_file2_.name, "r+w", "utf-8")
+  
+  relations_file = []
+  relations_file.append(tempfile.NamedTemporaryFile())
+  relations_file.append(tempfile.NamedTemporaryFile())
+  relations_file.append(tempfile.NamedTemporaryFile())
+  relations_file.append(tempfile.NamedTemporaryFile())
+  relations_file.append(tempfile.NamedTemporaryFile())
   
   widgets = ['Importing data from NavTeq Shapes: ', progressbar.Bar(marker=progressbar.AnimatedMarker()),
            ' ', progressbar.ETA()]
-  maxval = len(shpfile) + zlevels.numRecords
+  maxval = 2 * len(shpfile) + zlevels.numRecords
   progress = progressbar.ProgressBar(widgets=widgets, maxval=maxval).start()
   progress.update(0)
   
-  processStreets(zlevels, rdms, cdms, shpfile, nodes_file, ways_file, progress, relations_file, relations_file2)
+  process(zlevels, rdms, cdms, shpfile, nodes_file, ways_file, progress, relations_file)
   
   if not progress is None:
     progress.finish()
@@ -635,13 +669,16 @@ def main(argv):
   nodes_file.flush()
   nodes_file.seek(0)
   while 1:
-    lines = nodes_file.readlines(1000)
+    lines = nodes_file.readlines(200)
     if not lines: 
       break
     else:
       for line in lines:
         output_file.write(line)
-        progress.update(progress.currval + 1)
+        try:
+          progress.update(progress.currval + 1)
+        except:
+          pass
         if random.random() > 0.8 :
           output_file.flush()
   nodes_file.close()
@@ -650,49 +687,39 @@ def main(argv):
   ways_file.flush()
   ways_file.seek(0)
   while 1:
-    lines = ways_file.readlines(500)
+    lines = ways_file.readlines(200)
     if not lines: 
       break
     else:
       for line in lines:
         output_file.write(line)
-        progress.update(progress.currval + 1)
+        try:
+          progress.update(progress.currval + 1)
+        except:
+          pass
         if random.random() > 0.8 :
           output_file.flush()
   ways_file.close()
   ways_file_.close()
-    
-  relations_file.flush()
-  relations_file.seek(0)
-  while 1:
-    lines = relations_file.readlines(500)
-    if not lines: 
-      break
-    else:
-      for line in lines:
-        output_file.write(line)
-        progress.update(progress.currval + 1)
-        if random.random() > 0.8 :
-          output_file.flush()
-  relations_file.close()
-  relations_file_.close()
-    
-  relations_file2.flush()
-  relations_file2.seek(0)
-  while 1:
-    lines = relations_file2.readlines(500)
-    if not lines: 
-      break
-    else:
-      for line in lines:
-        output_file.write(line)
-        progress.update(progress.currval + 1)
-        if random.random() > 0.8 :
-          output_file.flush()
-      output_file.flush()
-  relations_file2.close()
-  relations_file2_.close()
-      
+  
+  for rfile in relations_file:
+    rfile.flush()
+    rfile.seek(0)
+    while 1:
+      lines = rfile.readlines(200)
+      if not lines: 
+        break
+      else:
+        for line in lines:
+          output_file.write(line)
+          try:
+            progress.update(progress.currval + 1)
+          except:
+            pass
+          if random.random() > 0.8 :
+            output_file.flush()
+    rfile.close()
+        
   output_file.write(' </osm>')
   output_file.write('\n')
   output_file.flush()
