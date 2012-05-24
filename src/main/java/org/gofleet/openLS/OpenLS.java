@@ -194,6 +194,9 @@ public class OpenLS {
 		} catch (InterruptedException e) {
 			LOG.error(e, e);
 		}
+
+		LOG.info("Numero de resultados: " + resultado.size());
+
 		return Utils.envelop(resultado, locale).getValue();
 
 	}

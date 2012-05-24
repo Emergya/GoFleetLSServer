@@ -27,7 +27,9 @@
  */
 package org.emergya.osrm;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.net.URL;
 import java.text.ParseException;
@@ -171,23 +173,39 @@ public class OSRM {
 
 			com.vividsolutions.jts.geom.Point point = GeoUtil.getPoint(
 					wayPointList.getStartPoint(), sourceCRS);
-			url += "?loc=" + point.getY() + "," + point.getX();
+			url += "&start=" + point.getY() + "," + point.getX();
 
 			for (WayPointType wayPoint : wayPointList.getViaPoint()) {
 				point = GeoUtil.getPoint(wayPoint, sourceCRS);
-				url += "&loc=" + point.getY() + "," + point.getX();
+				url += "&via=" + point.getY() + "," + point.getX();
 			}
 			point = GeoUtil.getPoint(wayPointList.getEndPoint(), sourceCRS);
-			url += "&loc=" + point.getY() + "," + point.getX();
-
-			LOG.debug(url);
+			url += "&dest=" + point.getY() + "," + point.getX();
+			url += "&output=json&geomformat=cmp&instructions=true";
+			LOG.info(url);
 
 			LineStringType lst = new LineStringType();
 
 			lst.setSrsName(targetCRS.getName().getCode());
 
 			JsonFactory f = new JsonFactory();
-			JsonParser jp = f.createJsonParser(new URL(url));
+
+			URL jsonUrl = new URL(url);
+			StringBuilder json = new StringBuilder("");
+			BufferedReader in = new BufferedReader(new InputStreamReader(
+					jsonUrl.openStream()));
+
+			String inputLine;
+			while ((inputLine = in.readLine()) != null)
+				json.append(inputLine);
+			in.close();
+
+			String json_ = json.toString();
+			json_ = json_.replace(",,", ",");
+			LOG.info(json_);
+
+			JsonParser jp = f.createJsonParser(json_);
+
 			jp.nextToken();
 			while (jp.nextToken() != JsonToken.END_OBJECT
 					&& jp.getCurrentToken() != null) {
@@ -197,6 +215,7 @@ public class OSRM {
 				else if (jp.getCurrentName().equals("total_distance")) {
 					DistanceType duration = new DistanceType();
 					duration.setUom(DistanceUnitType.M);
+					jp.nextToken();
 					duration.setValue(new BigDecimal(jp.getText()));
 					routeSummary.setTotalDistance(duration);
 				} else if (jp.getCurrentName().equals("total_time")) {
@@ -204,8 +223,10 @@ public class OSRM {
 							0, 0, 0, jp.getIntValue());
 					routeSummary.setTotalTime(duration);
 				} else if (jp.getCurrentName().equals("route_geometry")) {
-					decodeRouteGeometry(lst.getPosOrPointPropertyOrPointRep(),
-							targetCRS, sourceCRS, jp);
+					jp.nextToken();
+					decodeRouteGeometry(jp.getText(),
+							lst.getPosOrPointPropertyOrPointRep(), targetCRS,
+							sourceCRS);
 				} else if (jp.getCurrentName().equals("route_instructions")) {
 					processInstructions(locale, routeSummary,
 							routeInstructionsList, jp);
@@ -243,10 +264,10 @@ public class OSRM {
 			RouteSummaryType routeSummary,
 			RouteInstructionsListType routeInstructionsList, JsonParser jp)
 			throws IOException, JsonParseException {
+		jp.nextToken();
 		while (jp.nextToken() == JsonToken.START_ARRAY
 				&& jp.getCurrentToken() != null) {
 			RouteInstructionType e = new RouteInstructionType();
-			jp.nextToken();
 			String instruction = jp.getText();
 			if (i18n != null)
 				instruction = i18n.getString(locale, jp.getText());
@@ -268,58 +289,72 @@ public class OSRM {
 
 			jp.nextToken();
 
-			Duration duration = dataTypeFactory.newDuration(true, 0, 0, 0, 0,
-					0, jp.getIntValue());
-			e.setDuration(duration);
+			try {
+				Duration duration = dataTypeFactory.newDuration(true, 0, 0, 0,
+						0, 0, jp.getIntValue());
+				e.setDuration(duration);
+				routeInstructionsList.getRouteInstruction().add(e);
+			} catch (Throwable t) {
+				LOG.error("Fecha errónea", t);
+			}
 
-			while (jp.nextToken() != JsonToken.END_ARRAY
-					&& jp.getCurrentToken() != null)
-				;
-			routeInstructionsList.getRouteInstruction().add(e);
+			while (jp.getCurrentToken() != JsonToken.END_ARRAY)
+				try {
+					jp.nextToken();
+				} catch (JsonParseException ex) {
+					LOG.error("JSON wrong", ex);
+				}
 		}
 	}
 
-	private List<JAXBElement<?>> decodeRouteGeometry(List<JAXBElement<?>> list,
-			CoordinateReferenceSystem targetCRS,
-			CoordinateReferenceSystem sourceCRS, JsonParser jp)
+	private List<JAXBElement<?>> decodeRouteGeometry(String encoded,
+			List<JAXBElement<?>> list, CoordinateReferenceSystem targetCRS,
+			CoordinateReferenceSystem sourceCRS)
 			throws NoSuchAuthorityCodeException, FactoryException,
-			MismatchedDimensionException, TransformException,
-			JsonParseException, IOException {
-
+			MismatchedDimensionException, TransformException {
 		MathTransform transform = null;
 
-		LOG.trace(targetCRS.toWKT());
-		LOG.trace(sourceCRS.toWKT());
-		jp.nextToken();
+		double precision = 5;
+		precision = Math.pow(10, -precision);
+		int len = encoded.length(), index = 0, lat = 0, lng = 0;
+		while (index < len) {
+			int b, shift = 0, result = 0;
+			do {
+				b = encoded.charAt(index++) - 63;
+				result |= (b & 0x1f) << shift;
+				shift += 5;
+			} while (b >= 0x20);
+			int dlat = (((result & 1) != 0) ? ~(result >> 1) : (result >> 1));
+			lat += dlat;
+			shift = 0;
+			result = 0;
+			do {
+				b = encoded.charAt(index++) - 63;
+				result |= (b & 0x1f) << shift;
+				shift += 5;
+			} while (b >= 0x20);
+			int dlng = (((result & 1) != 0) ? ~(result >> 1) : (result >> 1));
+			lng += dlng;
 
-		while (jp.nextToken() == JsonToken.START_ARRAY
-				&& jp.getCurrentToken() != null) {
-			jp.nextToken();
-			Double lat = jp.getDoubleValue();
-			jp.nextToken();
-			Double lon = jp.getDoubleValue();
-			jp.nextToken();
-
-			Coordinate coord = new Coordinate(lat, lon);
+			Coordinate coord = new Coordinate(lat * precision, lng * precision);
 			Point sourceGeometry = gf.createPoint(coord);
-			LOG.trace(sourceGeometry);
 			if (sourceCRS != targetCRS) {
+				LOG.info(sourceGeometry);
 				if (transform == null)
 					transform = CRS.findMathTransform(sourceCRS, targetCRS);
 				sourceGeometry = JTS.transform(sourceGeometry, transform)
 						.getCentroid();
-				LOG.trace(sourceGeometry);
+				LOG.info(sourceGeometry);
 			}
 			DirectPositionListType e = new DirectPositionListType();
-			e.getValue().add(sourceGeometry.getY());
 			e.getValue().add(sourceGeometry.getX());
+			e.getValue().add(sourceGeometry.getY());
 
 			JAXBElement<DirectPositionListType> elem = new JAXBElement<DirectPositionListType>(
 					new QName("http://www.opengis.net/gml", "pos", "gml"),
 					DirectPositionListType.class, e);
 
 			list.add(elem);
-
 		}
 
 		return list;
