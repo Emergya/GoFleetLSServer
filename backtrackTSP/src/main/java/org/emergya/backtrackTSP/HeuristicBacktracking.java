@@ -39,19 +39,18 @@ class HeuristicBacktracking extends Thread {
 
 	@Override
 	public void run() {
-		try {
-			BackTrackSolution solution = heuristicBacktracking(this.current,
-					this.bag, this.distances, new BackTrackSolution(
-							new Stack<TSPStop>()));
-			best.add(solution);
-		} catch (Throwable t) {
-			LOG.error("Failure on heuristic backtracking procedure.", t);
-		}
+		BackTrackSolution solution = heuristicBacktracking(this.current,
+				this.bag, this.distances, new BackTrackSolution(
+						new Stack<TSPStop>()));
+		best.add(solution);
 	}
 
 	private BackTrackSolution heuristicBacktracking(BackTrackSolution current,
 			BacktrackStopBag bag, DistanceMatrix distances,
 			BackTrackSolution partialSolution) {
+
+		if (Thread.interrupted())
+			return partialSolution;
 
 		Collection<? super TSPStop> all = bag.getAll();
 		if (all.size() > 0) {
@@ -139,6 +138,7 @@ class HeuristicBacktracking extends Thread {
 }
 
 class HeuristicComparator implements Comparator<BacktrackStop> {
+	private static Log LOG = LogFactory.getLog(HeuristicComparator.class);
 	private BacktrackStop end = null;
 	private DistanceMatrix distances = null;
 	private BacktrackStop from = null;
@@ -152,8 +152,19 @@ class HeuristicComparator implements Comparator<BacktrackStop> {
 
 	public int compare(BacktrackStop o1, BacktrackStop o2) {
 		if (from != null) {
-			Double dist1 = (distances.distance(from, o1) + heuristic(o1, end));
-			Double dist2 = (distances.distance(from, o2) + heuristic(o2, end));
+			Double dist1 = Double.MAX_VALUE;
+			Double dist2 = Double.MAX_VALUE;
+			try {
+				dist1 = (distances.distance(from, o1) + heuristic(o1, end));
+
+			} catch (InterruptedException e) {
+				LOG.info("distance interrupted");
+			}
+			try {
+				dist2 = (distances.distance(from, o2) + heuristic(o2, end));
+			} catch (InterruptedException e) {
+				LOG.info("distance interrupted");
+			}
 			return dist1.compareTo(dist2);
 		} else {
 			Double dist1 = heuristic(o1, end);

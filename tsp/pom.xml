@@ -9,15 +9,16 @@
 
 
 	<distributionManagement>
-		<snapshotRepository>
+		<repository>
 			<id>gofleet</id>
 			<url>http://nexus.emergya.es/nexus/content/repositories/gofleet</url>
-		</snapshotRepository>
-		<repository>
-			<id>gofleet-snap</id>
-			<url>http://nexus.emergya.es/nexus/content/repositories/gofleet_releases</url>
 		</repository>
+		<snapshotRepository>
+			<id>gofleet-snap</id>
+			<url>http://nexus.emergya.es/nexus/content/repositories/gofleet-snapshots</url>
+		</snapshotRepository>
 	</distributionManagement>
+
 
 	<build>
 		<plugins>
@@ -41,7 +42,7 @@
 			<version>${geotools.version}</version>
 		</dependency>
 	</dependencies>
-	
+
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<geotools.version>8.0-M4</geotools.version>

@@ -44,7 +44,7 @@ class AStar implements Runnable {
 	}
 
 	private BackTrackSolution astar(DistanceMatrix distances,
-			BackTrackSolution partialSolution) {
+			BackTrackSolution partialSolution) throws InterruptedException {
 
 		Entry<Double, Stack<TSPStop>> candidate = openCandidates.firstEntry();
 

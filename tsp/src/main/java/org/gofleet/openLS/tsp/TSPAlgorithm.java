@@ -50,4 +50,10 @@ public interface TSPAlgorithm {
 	 */
 	List<TSPStop> order(TSPStopBag bag);
 
+	/**
+	 * Cancels the execution of the ordering. Useful for expensive algorithms.
+	 * @return
+	 */
+	boolean stop();
+
 }

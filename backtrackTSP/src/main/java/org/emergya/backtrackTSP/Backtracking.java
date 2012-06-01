@@ -47,6 +47,9 @@ class Backtracking extends Thread {
 	private BackTrackSolution backtrack(BackTrackSolution current,
 			BacktrackStopBag bag, DistanceMatrix distances,
 			BackTrackSolution partialSolution) {
+		
+		if (Thread.interrupted())
+			return partialSolution;
 
 		Collection<? super TSPStop> all = bag.getAll();
 		if (all.size() > 0) {

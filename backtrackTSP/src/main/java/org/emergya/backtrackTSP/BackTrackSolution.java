@@ -47,8 +47,12 @@ class BackTrackSolution implements Cloneable {
 		synchronized (this.res) {
 			for (TSPStop stop : this.res) {
 				if (last != null) {
-					cost += distance.distance((BacktrackStop) last,
-							(BacktrackStop) stop);
+					try {
+						cost += distance.distance((BacktrackStop) last,
+								(BacktrackStop) stop);
+					} catch (InterruptedException e) {
+						cost += Double.MAX_VALUE;
+					}
 				}
 				last = stop;
 			}

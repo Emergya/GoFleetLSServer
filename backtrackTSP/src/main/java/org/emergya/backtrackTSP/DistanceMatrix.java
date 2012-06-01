@@ -28,11 +28,14 @@
  */
 package org.emergya.backtrackTSP;
 
+import java.io.IOException;
+import java.text.ParseException;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
 import javax.xml.bind.JAXBElement;
+import javax.xml.bind.JAXBException;
 import javax.xml.namespace.QName;
 
 import net.opengis.gml.v_3_1_1.DirectPositionType;
@@ -71,7 +74,8 @@ public class DistanceMatrix {
 		this.configuration = configuration;
 	}
 
-	public Double distance(BacktrackStop from, BacktrackStop to) {
+	public Double distance(BacktrackStop from, BacktrackStop to)
+			throws InterruptedException {
 		Key k = new Key(from.id, to.id);
 		Double d = null;
 		synchronized (distances) {
@@ -86,7 +90,8 @@ public class DistanceMatrix {
 		}
 	}
 
-	private Double calculateDistance(TSPStop from, TSPStop to, Key k) {
+	private Double calculateDistance(TSPStop from, TSPStop to, Key k)
+			throws InterruptedException {
 		String host_port = "localhost:5000";
 		String http = "http";
 		if (configuration != null) {
@@ -119,8 +124,14 @@ public class DistanceMatrix {
 				distances.put(k, cost);
 			}
 			return cost;
-		} catch (Throwable e) {
-			LOG.error("Error extracting distance from " + from + " to " + to, e);
+		} catch (IOException e) {
+			LOG.error("Error extracting distance from " + from + " to " + to);
+			return Double.MAX_VALUE;
+		} catch (ParseException e) {
+			LOG.error("Error extracting distance from " + from + " to " + to);
+			return Double.MAX_VALUE;
+		} catch (JAXBException e) {
+			LOG.error("Error extracting distance from " + from + " to " + to);
 			return Double.MAX_VALUE;
 		}
 	}

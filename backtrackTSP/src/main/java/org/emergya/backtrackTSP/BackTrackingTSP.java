@@ -32,7 +32,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
@@ -46,6 +45,9 @@ public class BackTrackingTSP implements TSPAlgorithm {
 
 	private Boolean partialSolution = false;
 	private Integer seconds = 18;
+
+	private ExecutorService executor;
+	private ExecutorService executor2;
 
 	public BackTrackingTSP() {
 	}
@@ -66,21 +68,20 @@ public class BackTrackingTSP implements TSPAlgorithm {
 	public List<TSPStop> order(TSPStopBag _bag) {
 		long time = System.currentTimeMillis();
 
-		DistanceMatrix distances = new DistanceMatrix();
-
-		initializeMatrix(distances, _bag);
-
 		Runtime runtime = Runtime.getRuntime();
 		int numthreads = runtime.availableProcessors() * 10;
 
-		final ExecutorService executor = Executors
-				.newFixedThreadPool(numthreads);
+		executor = Executors.newFixedThreadPool(numthreads);
+
+		DistanceMatrix distances = new DistanceMatrix();
+
+		initializeMatrix(distances, _bag);
 
 		SolutionContainer solutions = new SolutionContainer(distances);
 
 		if (_bag.size() > 7) {
 			if (_bag.hasLast()) {
-				//run(executor, new AStar(_bag, distances, solutions));
+				// run(executor, new AStar(_bag, distances, solutions));
 				run(executor, new HeuristicBacktracking(_bag, distances,
 						solutions));
 			} else {
@@ -91,7 +92,7 @@ public class BackTrackingTSP implements TSPAlgorithm {
 
 					BacktrackStopBag bag = new BacktrackStopBag(stops,
 							_bag.getFirst(), stop);
-					//run(executor, new AStar(bag, distances, solutions));
+					// run(executor, new AStar(bag, distances, solutions));
 					run(executor, new HeuristicBacktracking(bag, distances,
 							solutions));
 				}
@@ -104,8 +105,9 @@ public class BackTrackingTSP implements TSPAlgorithm {
 		try {
 			if (!executor.awaitTermination(
 					this.seconds - (System.currentTimeMillis() - time) / 1000,
-					TimeUnit.SECONDS))
-				executor.shutdownNow();
+					TimeUnit.SECONDS)) {
+				stop();
+			}
 		} catch (InterruptedException e) {
 			if (!this.partialSolution) {
 				throw new RuntimeException(
@@ -120,19 +122,7 @@ public class BackTrackingTSP implements TSPAlgorithm {
 	}
 
 	private void run(final ExecutorService executor, final Runnable aStar) {
-		final FutureTask<Boolean> task = new FutureTask<Boolean>(aStar, true);
-		executor.execute(task);
-		Thread t = new Thread() {
-			@Override
-			public void run() {
-				try {
-					task.get(BackTrackingTSP.this.seconds, TimeUnit.SECONDS);
-				} catch (Throwable e) {
-				}
-			}
-
-		};
-		t.start();
+		executor.execute(aStar);
 	}
 
 	private List<TSPStop> getBest(SolutionContainer solutions,
@@ -160,7 +150,7 @@ public class BackTrackingTSP implements TSPAlgorithm {
 		Runtime runtime = Runtime.getRuntime();
 		int numthreads = runtime.availableProcessors() * 3;
 
-		ExecutorService executor = Executors.newFixedThreadPool(numthreads);
+		executor2 = Executors.newFixedThreadPool(numthreads);
 
 		List<BacktrackStop> candidates = null;
 		candidates = new ArrayList<BacktrackStop>();
@@ -168,15 +158,37 @@ public class BackTrackingTSP implements TSPAlgorithm {
 			candidates.add((BacktrackStop) stop);
 
 		for (BacktrackStop from : candidates) {
-			executor.execute(new InitializeDistances(from, candidates,
+			executor2.execute(new InitializeDistances(from, candidates,
 					distances));
 		}
-		executor.shutdown();
-		try {
-			executor.awaitTermination(6, TimeUnit.SECONDS);
-		} catch (InterruptedException e) {
-			LOG.error(e, e);
-		}
+		executor2.shutdown();
+		Thread t = new Thread() {
+			@Override
+			public void run() {
+				try {
+					executor2.awaitTermination(6, TimeUnit.SECONDS);
+				} catch (InterruptedException e) {
+					LOG.error(e, e);
+				}
+			}
+		};
+		t.start();
+	}
+
+	@Override
+	public boolean stop() {
+		LOG.info("Shutting down backtracking");
+
+		if (executor2 != null)
+			executor2.shutdownNow();
+		if (executor != null)
+			executor.shutdownNow();
+		else
+			return false;
+
+		LOG.info("Backtracking shut down");
+
+		return true;
 	}
 }
 

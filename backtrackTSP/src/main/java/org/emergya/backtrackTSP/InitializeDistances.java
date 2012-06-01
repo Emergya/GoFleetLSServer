@@ -22,8 +22,15 @@ public class InitializeDistances extends Thread {
 
 	public void run() {
 		for (BacktrackStop i : to) {
+			if (Thread.interrupted())
+				return;
+
 			if (i != from)
-				distance.distance(from, i);
+				try {
+					distance.distance(from, i);
+				} catch (InterruptedException e) {
+					throw new RuntimeException(e);
+				}
 		}
 		LOG.trace("Done with " + from.getId());
 	}
