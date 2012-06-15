@@ -27,9 +27,11 @@
  */
 package org.emergya.osrm;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
-import java.net.URL;
+import java.net.UnknownHostException;
 import java.text.ParseException;
 import java.util.List;
 import java.util.Locale;
@@ -57,6 +59,10 @@ import net.opengis.xls.v_1_2_0.WayPointType;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.JsonParser;
@@ -163,7 +169,7 @@ public class OSRM {
 			WayPointListType wayPointList = param.getRoutePlan()
 					.getWayPointList();
 
-			String url = http + "://" + host_port + "/viaroute";
+			String url = "/viaroute";
 
 			CoordinateReferenceSystem sourceCRS = CRS.decode(EPSG_4326);
 			CoordinateReferenceSystem targetCRS = GeoUtil.getSRS(wayPointList
@@ -187,7 +193,7 @@ public class OSRM {
 			lst.setSrsName(targetCRS.getName().getCode());
 
 			JsonFactory f = new JsonFactory();
-			JsonParser jp = f.createJsonParser(new URL(url));
+			JsonParser jp = f.createJsonParser(getOSRMStream(host_port, url));
 			jp.nextToken();
 			while (jp.nextToken() != JsonToken.END_OBJECT
 					&& jp.getCurrentToken() != null) {
@@ -228,7 +234,21 @@ public class OSRM {
 			LOG.error("Error generating route response: " + t, t);
 			t.printStackTrace();
 		}
+
 		return res;
+	}
+
+	private BufferedReader getOSRMStream(String host_port, String url)
+			throws UnknownHostException, IOException {
+
+		DefaultHttpClient httpclient = new DefaultHttpClient();
+		HttpGet httpget = new HttpGet("http://" + host_port + url);
+
+		HttpResponse response = httpclient.execute(httpget);
+
+		BufferedReader in = new BufferedReader(new InputStreamReader(response
+				.getEntity().getContent()));
+		return in;
 	}
 
 	/**
@@ -273,8 +293,7 @@ public class OSRM {
 			e.setDuration(duration);
 
 			while (jp.nextToken() != JsonToken.END_ARRAY
-					&& jp.getCurrentToken() != null)
-				;
+					&& jp.getCurrentToken() != null);
 			routeInstructionsList.getRouteInstruction().add(e);
 		}
 	}
