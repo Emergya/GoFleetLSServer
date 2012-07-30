@@ -191,6 +191,8 @@ public class OSRM {
 			LineStringType lst = new LineStringType();
 
 			lst.setSrsName(targetCRS.getName().getCode());
+			routeGeometry.setLineString(lst);
+			res.setRouteGeometry(routeGeometry);
 
 			JsonFactory f = new JsonFactory();
 			JsonParser jp = f.createJsonParser(getOSRMStream(host_port, url));
@@ -220,8 +222,6 @@ public class OSRM {
 			}
 			jp.close(); // ensure resources get cleaned up timely and properly
 
-			routeGeometry.setLineString(lst);
-			res.setRouteGeometry(routeGeometry);
 			res.setRouteHandle(routeHandle);
 
 			if (param.getRouteInstructionsRequest() != null) {
