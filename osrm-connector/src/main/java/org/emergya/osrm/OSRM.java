@@ -25,15 +25,17 @@
  * This exception does not however invalidate any other reasons why the
  * executable file might be covered by the GNU General Public License.
  */
-package org.gofleet.openLS.util;
+package org.emergya.osrm;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
-import java.net.URL;
+import java.net.UnknownHostException;
+import java.text.ParseException;
 import java.util.List;
 import java.util.Locale;
 
-import javax.ws.rs.core.MediaType;
 import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
 import javax.xml.datatype.DatatypeFactory;
@@ -57,7 +59,12 @@ import net.opengis.xls.v_1_2_0.WayPointType;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
 import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
 import org.geotools.geometry.jts.JTS;
@@ -75,17 +82,17 @@ import org.springframework.stereotype.Repository;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.Point;
-import com.vividsolutions.jts.io.ParseException;
 
 /**
  * @author marias
  * 
  */
+@SuppressWarnings("restriction")
 @Repository
-public class OSRMConnector {
+public class OSRM {
 
 	protected static final String EPSG_4326 = "EPSG:4326";
-	private static Log LOG = LogFactory.getLog(OSRMConnector.class);
+	private static Log LOG = LogFactory.getLog(OSRM.class);
 	private GeometryFactory gf = new GeometryFactory();
 	private DatatypeFactory dataTypeFactory = new com.sun.org.apache.xerces.internal.jaxp.datatype.DatatypeFactoryImpl();
 
@@ -93,13 +100,22 @@ public class OSRMConnector {
 	private I18n i18n;
 
 	/**
-	 * @param i18n the i18n to set
+	 * @param i18n
+	 *            the i18n to set
 	 */
 	public void setI18n(I18n i18n) {
 		this.i18n = i18n;
 	}
 
-	public OSRMConnector() {
+	public OSRM() {
+	}
+
+	/**
+	 * To use outside spring context
+	 */
+	public OSRM(I18n i18n) {
+		this();
+		setI18n(i18n);
 	}
 
 	/**
@@ -153,24 +169,22 @@ public class OSRMConnector {
 			WayPointListType wayPointList = param.getRoutePlan()
 					.getWayPointList();
 
-			String url = http + "://" + host_port + "/viaroute";
+			String url = "/viaroute";
 
 			CoordinateReferenceSystem sourceCRS = CRS.decode(EPSG_4326);
 			CoordinateReferenceSystem targetCRS = GeoUtil.getSRS(wayPointList
 					.getStartPoint());
 
-			Point point = GeoUtil.getPoint(wayPointList.getStartPoint(),
-					sourceCRS);
-			url += "&start=" + point.getY() + "," + point.getX();
-			point = GeoUtil.getPoint(wayPointList.getEndPoint(), sourceCRS);
-			url += "&dest=" + point.getY() + "," + point.getX();
+			com.vividsolutions.jts.geom.Point point = GeoUtil.getPoint(
+					wayPointList.getStartPoint(), sourceCRS);
+			url += "?loc=" + point.getY() + "," + point.getX();
 
 			for (WayPointType wayPoint : wayPointList.getViaPoint()) {
 				point = GeoUtil.getPoint(wayPoint, sourceCRS);
-				url += "&via=" + point.getY() + "," + point.getX();
+				url += "&loc=" + point.getY() + "," + point.getX();
 			}
-
-			url += "&output=json&instructions=true";
+			point = GeoUtil.getPoint(wayPointList.getEndPoint(), sourceCRS);
+			url += "&loc=" + point.getY() + "," + point.getX();
 
 			LOG.debug(url);
 
@@ -179,70 +193,28 @@ public class OSRMConnector {
 			lst.setSrsName(targetCRS.getName().getCode());
 
 			JsonFactory f = new JsonFactory();
-			JsonParser jp = f.createJsonParser(new URL(url));
+			JsonParser jp = f.createJsonParser(getOSRMStream(host_port, url));
 			jp.nextToken();
 			while (jp.nextToken() != JsonToken.END_OBJECT
 					&& jp.getCurrentToken() != null) {
 				String fieldname = jp.getCurrentName();
 				if (fieldname == null)
 					;
-				else if (fieldname.equals("route_summary")) {
-					if (jp.nextToken() == JsonToken.START_OBJECT
-							&& jp.getCurrentToken() != null) {
-						while (jp.nextToken() != JsonToken.END_OBJECT
-								&& jp.getCurrentToken() != null) {
-							if (jp.getCurrentName().equals("total_time")) {
-								jp.nextToken();
-								Duration duration = dataTypeFactory
-										.newDuration(true, 0, 0, 0, 0,
-												jp.getIntValue(), 0);
-								routeSummary.setTotalTime(duration);
-							} else if (jp.getCurrentName().equals(
-									"total_distance")) {
-								jp.nextToken();
-								DistanceType duration = new DistanceType();
-								duration.setUom(DistanceUnitType.M);
-								duration.setValue(new BigDecimal(jp.getText()));
-								routeSummary.setTotalDistance(duration);
-							}
-						}
-					}
+				else if (jp.getCurrentName().equals("total_distance")) {
+					DistanceType duration = new DistanceType();
+					duration.setUom(DistanceUnitType.M);
+					duration.setValue(new BigDecimal(jp.getText()));
+					routeSummary.setTotalDistance(duration);
+				} else if (jp.getCurrentName().equals("total_time")) {
+					Duration duration = dataTypeFactory.newDuration(true, 0, 0,
+							0, 0, 0, jp.getIntValue());
+					routeSummary.setTotalTime(duration);
 				} else if (jp.getCurrentName().equals("route_geometry")) {
-					String geometry = jp.getText();
-					decodeRouteGeometry(geometry,
-							lst.getPosOrPointPropertyOrPointRep(), targetCRS,
-							sourceCRS);
+					decodeRouteGeometry(lst.getPosOrPointPropertyOrPointRep(),
+							targetCRS, sourceCRS, jp);
 				} else if (jp.getCurrentName().equals("route_instructions")) {
-					while (jp.nextToken() == JsonToken.START_ARRAY
-							&& jp.getCurrentToken() != null) {
-						RouteInstructionType e = new RouteInstructionType();
-						jp.nextToken();
-						String instruction = i18n.getString(locale,
-								jp.getText());
-						jp.nextToken();
-						if (jp.getText().length() > 0)
-							instruction += " " + i18n.getString(locale, "on")
-									+ " " + jp.getText();
-						e.setInstruction(instruction);
-						jp.nextToken();
-
-						DistanceType distance = new DistanceType();
-						distance.setUom(DistanceUnitType.M);
-						distance.setValue(new BigDecimal(jp.getText()));
-						e.setDistance(distance);
-
-						jp.nextToken();
-
-						Duration duration = dataTypeFactory.newDuration(true,
-								0, 0, 0, 0, jp.getIntValue(), 0);
-						routeSummary.setTotalTime(duration);
-						e.setDuration(duration);
-
-						while (jp.nextToken() != JsonToken.END_ARRAY
-								&& jp.getCurrentToken() != null)
-							;
-						routeInstructionsList.getRouteInstruction().add(e);
-					}
+					processInstructions(locale, routeSummary,
+							routeInstructionsList, jp);
 				}
 				jp.nextToken();
 			}
@@ -252,64 +224,121 @@ public class OSRMConnector {
 			res.setRouteGeometry(routeGeometry);
 			res.setRouteHandle(routeHandle);
 
-			if (param.getRouteInstructionsRequest() != null)
+			if (param.getRouteInstructionsRequest() != null) {
 				res.setRouteInstructionsList(routeInstructionsList);
-			res.getRouteInstructionsList().setFormat(MediaType.TEXT_PLAIN);
-			res.getRouteInstructionsList().setLang(locale.getLanguage());
+				res.getRouteInstructionsList().setFormat("text/plain");
+				res.getRouteInstructionsList().setLang(locale.getLanguage());
+			}
 			res.setRouteSummary(routeSummary);
 		} catch (Throwable t) {
 			LOG.error("Error generating route response: " + t, t);
 			t.printStackTrace();
 		}
+
 		return res;
 	}
 
-	private List<JAXBElement<?>> decodeRouteGeometry(String encoded,
-			List<JAXBElement<?>> list, CoordinateReferenceSystem targetCRS,
-			CoordinateReferenceSystem sourceCRS)
+	private BufferedReader getOSRMStream(String host_port, String url)
+			throws UnknownHostException, IOException {
+
+		DefaultHttpClient httpclient = new DefaultHttpClient();
+		HttpGet httpget = new HttpGet("http://" + host_port + url);
+
+		HttpResponse response = httpclient.execute(httpget);
+
+		BufferedReader in = new BufferedReader(new InputStreamReader(response
+				.getEntity().getContent()));
+		return in;
+	}
+
+	/**
+	 * @param locale
+	 * @param routeSummary
+	 * @param routeInstructionsList
+	 * @param jp
+	 * @throws IOException
+	 * @throws JsonParseException
+	 */
+	public void processInstructions(Locale locale,
+			RouteSummaryType routeSummary,
+			RouteInstructionsListType routeInstructionsList, JsonParser jp)
+			throws IOException, JsonParseException {
+		while (jp.nextToken() == JsonToken.START_ARRAY
+				&& jp.getCurrentToken() != null) {
+			RouteInstructionType e = new RouteInstructionType();
+			jp.nextToken();
+			String instruction = jp.getText();
+			if (i18n != null)
+				instruction = i18n.getString(locale, jp.getText());
+			jp.nextToken();
+			if (jp.getText().length() > 0) {
+				if (i18n == null)
+					instruction += " on " + jp.getText();
+				else
+					instruction += " " + i18n.getString(locale, "on") + " "
+							+ jp.getText();
+			}
+			e.setInstruction(instruction);
+			jp.nextToken();
+
+			DistanceType distance = new DistanceType();
+			distance.setUom(DistanceUnitType.M);
+			distance.setValue(new BigDecimal(jp.getText()));
+			e.setDistance(distance);
+
+			jp.nextToken();
+
+			Duration duration = dataTypeFactory.newDuration(true, 0, 0, 0, 0,
+					0, jp.getIntValue());
+			e.setDuration(duration);
+
+			while (jp.nextToken() != JsonToken.END_ARRAY
+					&& jp.getCurrentToken() != null);
+			routeInstructionsList.getRouteInstruction().add(e);
+		}
+	}
+
+	private List<JAXBElement<?>> decodeRouteGeometry(List<JAXBElement<?>> list,
+			CoordinateReferenceSystem targetCRS,
+			CoordinateReferenceSystem sourceCRS, JsonParser jp)
 			throws NoSuchAuthorityCodeException, FactoryException,
-			MismatchedDimensionException, TransformException {
+			MismatchedDimensionException, TransformException,
+			JsonParseException, IOException {
+
 		MathTransform transform = null;
 
-		double precision = 5;
-		precision = Math.pow(10, -precision);
-		int len = encoded.length(), index = 0, lat = 0, lng = 0;
-		while (index < len) {
-			int b, shift = 0, result = 0;
-			do {
-				b = encoded.charAt(index++) - 63;
-				result |= (b & 0x1f) << shift;
-				shift += 5;
-			} while (b >= 0x20);
-			int dlat = (((result & 1) != 0) ? ~(result >> 1) : (result >> 1));
-			lat += dlat;
-			shift = 0;
-			result = 0;
-			do {
-				b = encoded.charAt(index++) - 63;
-				result |= (b & 0x1f) << shift;
-				shift += 5;
-			} while (b >= 0x20);
-			int dlng = (((result & 1) != 0) ? ~(result >> 1) : (result >> 1));
-			lng += dlng;
+		LOG.trace(targetCRS.toWKT());
+		LOG.trace(sourceCRS.toWKT());
+		jp.nextToken();
 
-			Coordinate coord = new Coordinate(lng * precision, lat * precision);
+		while (jp.nextToken() == JsonToken.START_ARRAY
+				&& jp.getCurrentToken() != null) {
+			jp.nextToken();
+			Double lat = jp.getDoubleValue();
+			jp.nextToken();
+			Double lon = jp.getDoubleValue();
+			jp.nextToken();
+
+			Coordinate coord = new Coordinate(lat, lon);
 			Point sourceGeometry = gf.createPoint(coord);
+			LOG.trace(sourceGeometry);
 			if (sourceCRS != targetCRS) {
 				if (transform == null)
 					transform = CRS.findMathTransform(sourceCRS, targetCRS);
 				sourceGeometry = JTS.transform(sourceGeometry, transform)
 						.getCentroid();
+				LOG.trace(sourceGeometry);
 			}
 			DirectPositionListType e = new DirectPositionListType();
-			e.getValue().add(coord.x);
-			e.getValue().add(coord.y);
+			e.getValue().add(sourceGeometry.getY());
+			e.getValue().add(sourceGeometry.getX());
 
 			JAXBElement<DirectPositionListType> elem = new JAXBElement<DirectPositionListType>(
 					new QName("http://www.opengis.net/gml", "pos", "gml"),
 					DirectPositionListType.class, e);
 
 			list.add(elem);
+
 		}
 
 		return list;

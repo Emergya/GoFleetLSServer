@@ -1,7 +1,5 @@
-package org.gofleet.openLS.util;
+package org.emergya.osrm;
 
-import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -11,25 +9,15 @@ import net.opengis.gml.v_3_1_1.DirectPositionType;
 import net.opengis.gml.v_3_1_1.LinearRingType;
 import net.opengis.gml.v_3_1_1.PointType;
 import net.opengis.gml.v_3_1_1.PolygonType;
-import net.opengis.xls.v_1_2_0.AddressType;
-import net.opengis.xls.v_1_2_0.NamedPlaceClassification;
-import net.opengis.xls.v_1_2_0.NamedPlaceType;
 import net.opengis.xls.v_1_2_0.PositionType;
-import net.opengis.xls.v_1_2_0.StreetAddressType;
-import net.opengis.xls.v_1_2_0.StreetNameType;
 import net.opengis.xls.v_1_2_0.WayPointType;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.geotools.geometry.jts.JTS;
 import org.geotools.referencing.CRS;
-import org.gofleet.openLS.ddbb.dao.GeoCodingDAO;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opengis.referencing.operation.MathTransform;
-import org.postgis.PGgeometry;
-import org.postgis.Point;
-import org.postgresql.jdbc4.Jdbc4Array;
 
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
@@ -67,145 +55,7 @@ public class GeoUtil {
 	static Log LOG = LogFactory.getLog(GeoUtil.class);
 	static GeometryFactory geomFact = new GeometryFactory();
 
-	public static PointType getReferencedPoint(PGgeometry g) {
-		Point center = g.getGeometry().getFirstPoint();
-		ArrayList<Double> list = new ArrayList<Double>();
-		list.add(center.getX());
-		list.add(center.getY());
-		PointType point = new PointType();
-		DirectPositionType pos = new DirectPositionType();
-		pos.setValue(list);
-		point.setPos(pos);
-		return point;
-	}
-
-	public static AddressType getAddress(Jdbc4Array address)
-			throws SQLException {
-
-		GeoCodingDAO.LOG.trace("Address returned" + address.toString());
-
-		String[] fields = StringUtils.split(address.toString(), ",");
-
-		AddressType value = new AddressType();
-		value.setCountryCode(fields[fields.length - 1]);
-		StreetAddressType street_ = new StreetAddressType();
-		StreetNameType streetName = new StreetNameType();
-		streetName.setValue(fields[0].substring(1, fields[0].length() - 1));
-		street_.getStreet().add(streetName);
-		value.setStreetAddress(street_);
-		NamedPlaceType namedPlace = new NamedPlaceType();
-		namedPlace.setType(NamedPlaceClassification.MUNICIPALITY);
-		namedPlace.setValue(fields[2].substring(1, fields[2].length() - 1));
-		namedPlace = new NamedPlaceType();
-		namedPlace.setType(NamedPlaceClassification.MUNICIPALITY_SUBDIVISION);
-		namedPlace.setValue(fields[1].substring(1, fields[1].length() - 2));
-		namedPlace = new NamedPlaceType();
-		namedPlace.setType(NamedPlaceClassification.COUNTRY_SUBDIVISION);
-		namedPlace.setValue(fields[3].substring(1, fields[3].length() - 3));
-		value.getPlace().add(namedPlace);
-		return value;
-	}
-
-	public static String extractStreet(AddressType address) {
-		String res = null;
-
-		try {
-			if (address.getStreetAddress() != null) {
-				List<StreetNameType> street = address.getStreetAddress()
-						.getStreet();
-				for (StreetNameType snt : street)
-					if (snt != null && snt.getValue() != null)
-						res = snt.getValue();
-			}
-		} catch (Throwable t) {
-			LOG.error("Error extracting Street from parameters. Failing back to null");
-			res = null;
-		}
-
-		return res;
-	}
-
-	public static String extractMun(AddressType address) {
-		String res = null;
-
-		try {
-			for (NamedPlaceType place : address.getPlace()) {
-				try {
-					if (StringUtils.equalsIgnoreCase(place.getType().name(),
-							("Municipality"))
-							|| StringUtils.equalsIgnoreCase(place.getType()
-									.toString(), ("Municipality")))
-						res = place.getValue();
-					break;
-				} catch (Throwable t) {
-					LOG.error(t);
-				}
-			}
-		} catch (Throwable t) {
-			LOG.error("Error extracting Mun from parameters", t);
-			res = null;
-		}
-
-		return res;
-	}
-
-	public static String extractMunSub(AddressType address) {
-		String res = null;
-
-		try {
-			for (NamedPlaceType place : address.getPlace()) {
-				try {
-					if (StringUtils.equalsIgnoreCase(place.getType().name(),
-							("MunicipalitySubdivision"))
-							|| StringUtils.equalsIgnoreCase(place.getType()
-									.toString(), ("MunicipalitySubdivision")))
-						res = place.getValue();
-					break;
-				} catch (Throwable t) {
-					LOG.error(t);
-				}
-			}
-		} catch (Throwable t) {
-			LOG.error("Error extracting MunSub from parameters", t);
-		}
-
-		return res;
-	}
-
-	public static String extractCountry(AddressType address) {
-		String res = address.getCountryCode();
-
-		try {
-			res = address.getCountryCode();
-		} catch (Throwable t) {
-			LOG.error("Error extracting Country from parameters", t);
-		}
-
-		return res;
-	}
-
-	public static String extractSubCountry(AddressType address) {
-		String res = null;
-
-		try {
-			for (NamedPlaceType place : address.getPlace()) {
-				try {
-					if (StringUtils.equalsIgnoreCase(place.getType().name(),
-							("CountrySubdivision"))
-							|| StringUtils.equalsIgnoreCase(place.getType()
-									.toString(), ("CountrySubdivision")))
-						res = place.getValue();
-					break;
-				} catch (Throwable t) {
-					LOG.error(t);
-				}
-			}
-		} catch (Throwable t) {
-			LOG.error("Error extracting SubCountry from parameters", t);
-		}
-		return res;
-	}
-
+	@SuppressWarnings("restriction")
 	public static com.vividsolutions.jts.geom.Point getPoint(
 			WayPointType startPoint, CoordinateReferenceSystem targetCRS) {
 
@@ -224,7 +74,7 @@ public class GeoUtil {
 				.createPoint(new Coordinate(ctype.getValue().get(0), ctype
 						.getValue().get(1)));
 
-		LOG.info(p);
+		LOG.debug(p);
 		if (targetCRS != null && !sourceCRS.equals(targetCRS)) {
 			try {
 				MathTransform transform = CRS.findMathTransform(sourceCRS,

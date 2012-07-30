@@ -1,0 +1,50 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>org.emergya</groupId>
+	<artifactId>tsp</artifactId>
+	<version>0.1.1</version>
+	<name>tsp</name>
+	<description>TSP interfaces and utilities.</description>
+
+
+	<distributionManagement>
+		<repository>
+			<id>gofleet</id>
+			<url>http://nexus.emergya.es/nexus/content/repositories/gofleet</url>
+		</repository>
+		<snapshotRepository>
+			<id>gofleet-snap</id>
+			<url>http://nexus.emergya.es/nexus/content/repositories/gofleet-snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>
+
+
+	<build>
+		<plugins>
+			<plugin>
+
+				<!-- Maven compiler plugin -->
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>1.6</source>
+					<target>1.6</target>
+					<optimize>true</optimize>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.geotools</groupId>
+			<artifactId>gt-api</artifactId>
+			<version>${geotools.version}</version>
+		</dependency>
+	</dependencies>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<geotools.version>8.0-M4</geotools.version>
+	</properties>
+</project>

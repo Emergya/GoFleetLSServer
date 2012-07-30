@@ -7,7 +7,10 @@ import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 
 import org.apache.commons.configuration.AbstractConfiguration;
+import org.apache.commons.configuration.CompositeConfiguration;
 import org.apache.commons.configuration.DatabaseConfiguration;
+import org.apache.commons.configuration.JNDIConfiguration;
+import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
@@ -28,36 +31,51 @@ import org.springframework.stereotype.Repository;
  */
 public class Configuration {
 
-	private static AbstractConfiguration configuration = null;
+	private static CompositeConfiguration configuration = null;
 	private static org.apache.commons.logging.Log log = LogFactory
 			.getLog(Configuration.class);
 
 	@Autowired
 	private org.apache.commons.dbcp.BasicDataSource dataSource;
 
-	private AbstractConfiguration getConfiguration() {
+	protected AbstractConfiguration getConfiguration() {
 		if (configuration == null) {
 
+			configuration = new CompositeConfiguration();
+
 			try {
-				configuration = new DatabaseConfiguration(dataSource,
-						"configuration", "key", "value");
+				if (dataSource != null
+						&& dataSource.isAccessToUnderlyingConnectionAllowed()
+						&& !dataSource.isClosed())
+					configuration.addConfiguration(new DatabaseConfiguration(
+							dataSource, "configuration", "key", "value"));
 			} catch (Throwable t) {
 				log.error("Error loading database configuration", t);
 			}
+			try {
+				configuration.addConfiguration(new JNDIConfiguration(
+						new InitialContext()));
+			} catch (Throwable t) {
+				log.error("Error loading jndi configuration", t);
+			}
 
 			try {
+				final PropertiesConfiguration configurator = new PropertiesConfiguration();
 				InitialContext icontext = new InitialContext();
 				Context context = (Context) icontext.lookup("java:comp/env");
 				NamingEnumeration<NameClassPair> propiedadesJDNI = context
 						.list("");
 				while (propiedadesJDNI.hasMoreElements()) {
 					NameClassPair propiety = propiedadesJDNI.nextElement();
-					configuration.addProperty(propiety.getName(),
+					configurator.addProperty(propiety.getName(),
 							context.lookup(propiety.getName()));
-					log.trace("Configuring '" + propiety.getName() + "' as '"
-							+ context.lookup(propiety.getName().toString())
-							+ "'");
+					log.trace("Configuring '"
+							+ propiety.getName()
+							+ "' as '"
+							+ configurator.getString(propiety.getName()
+									.toString()) + "'");
 				}
+				configuration.addConfiguration(configurator);
 
 			} catch (NamingException e) {
 				log.error("Error loading configuration from context: " + e, e);

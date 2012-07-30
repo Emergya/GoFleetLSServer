@@ -33,10 +33,10 @@ import net.opengis.xls.v_1_2_0.XLSType;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.emergya.osrm.OSRM;
 import org.gofleet.openLS.ddbb.GeoCoding;
 import org.gofleet.openLS.ddbb.Routing;
 import org.gofleet.openLS.util.MoNaVConnector;
-import org.gofleet.openLS.util.OSRMConnector;
 import org.gofleet.openLS.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
@@ -81,7 +81,7 @@ public class OpenLS {
 	private Routing routingController;
 
 	@Resource
-	private OSRMConnector osrmConnector;
+	private OSRM osrmConnector;
 
 	@Resource
 	private GeoCoding geoCodingController;
@@ -105,7 +105,7 @@ public class OpenLS {
 		this.configuration = configuration;
 	}
 
-	private MoNaVConnector monavConnector = new MoNaVConnector();
+	 private MoNaVConnector monavConnector = new MoNaVConnector();
 
 	/**
 	 * Stupid test to see if the Server is alive.
@@ -126,76 +126,82 @@ public class OpenLS {
 	 * @return
 	 */
 	@POST
-	@Produces(MediaType.TEXT_XML)
+	@Produces(MediaType.APPLICATION_XML)
 	@Consumes({ MediaType.APPLICATION_XML, MediaType.TEXT_XML,
 			MediaType.APPLICATION_ATOM_XML })
-	public JAXBElement<XLSType> openLS(JAXBElement<XLSType> jaxbelement) {
-		final XLSType parameter = jaxbelement.getValue();
-		LOG.trace("openLS(" + parameter + ")");
-		Locale localetmp = Locale.ROOT;
-
-		if (parameter.getLang() != null && !parameter.getLang().isEmpty()) {
-			LOG.trace("Language detected: " + parameter.getLang());
-			localetmp = new Locale(parameter.getLang());
-		}
-		final Locale locale = localetmp;
-		localetmp = null;
-		final List<List<AbstractResponseParametersType>> resultado = new LinkedList<List<AbstractResponseParametersType>>();
-
-		ExecutorService executor = Executors.newFixedThreadPool(3);
-
-		for (JAXBElement<? extends AbstractBodyType> jaxbbody : parameter
-				.getBody()) {
-
-			AbstractBodyType body = jaxbbody.getValue();
-
-			if (body instanceof RequestType) {
-
-				final AbstractRequestParametersType request = ((RequestType) body)
-						.getRequestParameters().getValue();
-
-				FutureTask<List<AbstractResponseParametersType>> thread = new FutureTask<List<AbstractResponseParametersType>>(
-						new Callable<List<AbstractResponseParametersType>>() {
-
-							public List<AbstractResponseParametersType> call()
-									throws Exception {
-								List<AbstractResponseParametersType> response = null;
-
-								try {
-									if (request instanceof DetermineRouteRequestType)
-										response = routePlan(
-												(DetermineRouteRequestType) request,
-												locale);
-									else if (request instanceof ReverseGeocodeRequestType)
-										response = reverseGeocoding((ReverseGeocodeRequestType) request);
-									else if (request instanceof GeocodeRequestType)
-										response = geocoding((GeocodeRequestType) request);
-									else if (request instanceof DirectoryRequestType)
-										response = directory((DirectoryRequestType) request);
-
-									synchronized (resultado) {
-										resultado.add(response);
-									}
-								} catch (Throwable e) {
-									LOG.error(e, e);
-									throw new RuntimeException(e);
-								}
-								return response;
-							}
-						});
-				executor.execute(thread);
-			}
-		}
-
-		executor.shutdown();
-
+	public XLSType openLS(JAXBElement<XLSType> jaxbelement) {
 		try {
-			executor.awaitTermination(10, TimeUnit.SECONDS);
-		} catch (InterruptedException e) {
-			LOG.error(e, e);
+			final XLSType parameter = jaxbelement.getValue();
+			LOG.trace("openLS(" + parameter + ")");
+			Locale localetmp = Locale.ROOT;
+
+			if (parameter.getLang() != null && !parameter.getLang().isEmpty()) {
+				LOG.trace("Language detected: " + parameter.getLang());
+				localetmp = new Locale(parameter.getLang());
+			}
+			final Locale locale = localetmp;
+			localetmp = null;
+			final List<List<AbstractResponseParametersType>> resultado = new LinkedList<List<AbstractResponseParametersType>>();
+
+			ExecutorService executor = Executors.newFixedThreadPool(3);
+
+			for (JAXBElement<? extends AbstractBodyType> jaxbbody : parameter
+					.getBody()) {
+
+				AbstractBodyType body = jaxbbody.getValue();
+
+				if (body instanceof RequestType) {
+
+					final AbstractRequestParametersType request = ((RequestType) body)
+							.getRequestParameters().getValue();
+
+					FutureTask<List<AbstractResponseParametersType>> thread = new FutureTask<List<AbstractResponseParametersType>>(
+							new Callable<List<AbstractResponseParametersType>>() {
+
+								public List<AbstractResponseParametersType> call()
+										throws Exception {
+									List<AbstractResponseParametersType> response = null;
+
+									try {
+										if (request instanceof DetermineRouteRequestType)
+											response = routePlan(
+													(DetermineRouteRequestType) request,
+													locale);
+										else if (request instanceof ReverseGeocodeRequestType)
+											response = reverseGeocoding((ReverseGeocodeRequestType) request);
+										else if (request instanceof GeocodeRequestType)
+											response = geocoding((GeocodeRequestType) request);
+										else if (request instanceof DirectoryRequestType)
+											response = directory((DirectoryRequestType) request);
+
+										synchronized (resultado) {
+											resultado.add(response);
+										}
+									} catch (Throwable e) {
+										LOG.error("Error answering request", e);
+										throw new RuntimeException(e);
+									}
+									return response;
+								}
+							});
+					executor.execute(thread);
+				}
+			}
+
+			executor.shutdown();
+
+			try {
+				executor.awaitTermination(10, TimeUnit.SECONDS);
+			} catch (InterruptedException e) {
+				LOG.error(e, e);
+			}
+			return Utils.envelop(resultado, locale).getValue();
+		} catch (Throwable t) {
+			LOG.error("Unexpected error. Help!", t);
+
+			return null;
 		}
 
-		return Utils.envelop(resultado, locale);
 	}
 
 	/**
@@ -215,10 +221,11 @@ public class OpenLS {
 			String conn = configuration.get("RoutingConnector", "default");
 			if (conn.equals("PGROUTING"))
 				arpt = routingController.routePlan(param);
-			else if (conn.equals("MONAV"))
+			else if (conn.equals("MONAV")) {
+				if (monavConnector == null)
+					monavConnector = new MoNaVConnector();
 				arpt = monavConnector.routePlan(param);
-			else {
-
+			} else {
 				String host_port = configuration.get("OSRM_HOST",
 						"localhost:5000");
 				String http = "http";

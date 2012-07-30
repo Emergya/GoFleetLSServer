@@ -1,0 +1,96 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>org.emergya</groupId>
+	<artifactId>osrm-connector</artifactId>
+	<version>0.1.0</version>
+	<name>osrm-connector</name>
+	<description>Connector to OSRM routing</description>
+
+
+	<distributionManagement>
+		<repository>
+			<id>gofleet</id>
+			<url>http://nexus.emergya.es/nexus/content/repositories/gofleet</url>
+		</repository>
+		<snapshotRepository>
+			<id>gofleet-snap</id>
+			<url>http://nexus.emergya.es/nexus/content/repositories/gofleet-snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>
+
+
+	<build>
+		<plugins>
+			<plugin>
+
+				<!-- Maven compiler plugin -->
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>1.6</source>
+					<target>1.6</target>
+					<optimize>true</optimize>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.geotools</groupId>
+			<artifactId>gt-opengis</artifactId>
+			<version>${geotools.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.geotools</groupId>
+			<artifactId>gt-epsg-hsql</artifactId>
+			<version>${geotools.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.geotools</groupId>
+			<artifactId>gt-api</artifactId>
+			<version>${geotools.version}</version>
+		</dependency>
+
+		<!-- Internacionalization -->
+		<dependency>
+			<groupId>org.gofleet</groupId>
+			<artifactId>internacionalization</artifactId>
+			<version>1.1.0</version>
+		</dependency>
+
+		<!-- Log -->
+		<dependency>
+			<groupId>commons-logging</groupId>
+			<artifactId>commons-logging</artifactId>
+			<version>1.1.1</version>
+		</dependency>
+
+		<!-- JSON parser -->
+		<dependency>
+			<groupId>org.codehaus.jackson</groupId>
+			<artifactId>jackson-core-lgpl</artifactId>
+			<version>1.9.4</version>
+		</dependency>
+
+		<!-- OpenLS classes -->
+		<dependency>
+			<groupId>org.jvnet.ogc</groupId>
+			<artifactId>ols-v_1_2_0-schema</artifactId>
+			<version>1.0.3</version>
+		</dependency>
+
+		<!-- Http connection to OSRM -->
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+			<version>4.1.3</version>
+		</dependency>
+
+	</dependencies>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<geotools.version>8.0-M4</geotools.version>
+	</properties>
+</project>

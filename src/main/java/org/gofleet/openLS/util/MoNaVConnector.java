@@ -84,8 +84,8 @@ public class MoNaVConnector {
 					.createUnmarshaller();
 			context = JAXBContext.newInstance("org.jvnet.ogc.gml.v_3_1_1.jts");
 			marshaller = context.createMarshaller();
-		} catch (JAXBException e) {
-			LOG.error(e, e);
+		} catch (Throwable e) {
+			LOG.error("Unable to load MoNaV connector" , e);
 		}
 	}
 
