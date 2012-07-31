@@ -33,6 +33,7 @@ import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.net.UnknownHostException;
 import java.text.ParseException;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 
@@ -94,6 +95,11 @@ public class OSRM {
 	protected static final String EPSG_4326 = "EPSG:4326";
 	private static Log LOG = LogFactory.getLog(OSRM.class);
 	private GeometryFactory gf = new GeometryFactory();
+	/*
+	 * Atribute to save tha last coordinate form a point in the line string
+	 * request
+	 */
+	private Integer lastNode = null;
 	private DatatypeFactory dataTypeFactory = new com.sun.org.apache.xerces.internal.jaxp.datatype.DatatypeFactoryImpl();
 
 	@Autowired
@@ -164,7 +170,7 @@ public class OSRM {
 		// instruction with a map.
 
 		try {
-
+			lastNode = null;
 			RouteGeometryType routeGeometry = new RouteGeometryType();
 			WayPointListType wayPointList = param.getRoutePlan()
 					.getWayPointList();
@@ -216,7 +222,7 @@ public class OSRM {
 							targetCRS, sourceCRS, jp);
 				} else if (jp.getCurrentName().equals("route_instructions")) {
 					processInstructions(locale, routeSummary,
-							routeInstructionsList, jp);
+							routeInstructionsList, jp, lst);
 				}
 				jp.nextToken();
 			}
@@ -261,8 +267,8 @@ public class OSRM {
 	 */
 	public void processInstructions(Locale locale,
 			RouteSummaryType routeSummary,
-			RouteInstructionsListType routeInstructionsList, JsonParser jp)
-			throws IOException, JsonParseException {
+			RouteInstructionsListType routeInstructionsList, JsonParser jp,
+			LineStringType lineString) throws IOException, JsonParseException {
 		while (jp.nextToken() == JsonToken.START_ARRAY
 				&& jp.getCurrentToken() != null) {
 			RouteInstructionType e = new RouteInstructionType();
@@ -285,6 +291,28 @@ public class OSRM {
 			distance.setUom(DistanceUnitType.M);
 			distance.setValue(new BigDecimal(jp.getText()));
 			e.setDistance(distance);
+			
+			// Get position
+			jp.nextToken();
+			Integer currentNode = null;
+			if (routeInstructionsList.getRouteInstruction().size() > 0) {
+				List<RouteInstructionType> lri = routeInstructionsList
+						.getRouteInstruction();
+				currentNode = jp.getIntValue();
+				List<JAXBElement<?>> pointList = lineString.getPosOrPointPropertyOrPointRep();
+				LineStringType lineToRoute = new LineStringType();
+				if(currentNode > lastNode){
+					List<JAXBElement<?>> pointListToRoute = new LinkedList<JAXBElement<?>>();
+					RouteGeometryType rgt = new RouteGeometryType();
+					for(int i=lastNode; i<=currentNode; i++){
+						pointListToRoute.add(pointList.get(i));
+					}
+					lineToRoute.setPosOrPointPropertyOrPointRep(pointListToRoute);
+					rgt.setLineString(lineToRoute);
+					lri.get(lri.size()-1).setRouteInstructionGeometry(rgt);
+				}
+			}
+			lastNode = jp.getIntValue();
 
 			jp.nextToken();
 
@@ -292,8 +320,11 @@ public class OSRM {
 					0, jp.getIntValue());
 			e.setDuration(duration);
 
+			
+
 			while (jp.nextToken() != JsonToken.END_ARRAY
-					&& jp.getCurrentToken() != null);
+					&& jp.getCurrentToken() != null)
+				;
 			routeInstructionsList.getRouteInstruction().add(e);
 		}
 	}

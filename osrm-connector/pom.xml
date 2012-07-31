@@ -4,7 +4,7 @@
 	<groupId>org.emergya</groupId>
 	<artifactId>osrm-connector</artifactId>
 	<version>0.1.0</version>
-	<name>osrm-connector</name>
+	<name>osrm-connectordfssd</name>
 	<description>Connector to OSRM routing</description>
 
 
@@ -18,8 +18,12 @@
 			<url>http://nexus.emergya.es/nexus/content/repositories/gofleet-snapshots</url>
 		</snapshotRepository>
 	</distributionManagement>
-
-
+	<repositories>
+		<repository>
+			<id>public</id>
+			<url>http://nexus.emergya.es/nexus/content/repositories/GoFleet</url>
+		</repository>
+	</repositories>
 	<build>
 		<plugins>
 			<plugin>
