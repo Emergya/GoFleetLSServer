@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<service name="OpenLS">
+	<Description>
+		GofleetLS is an OGC OpenLS Server.
+	</Description>
+
+	<parameter name="ServiceObjectSupplier" locked="false">org.apache.axis2.extensions.spring.receivers.SpringServletContextObjectSupplier
+	</parameter>
+	<parameter name="SpringBeanName" locked="false">openLSService
+	</parameter>
+	<operation name="openLS" />
+	<operation name="test" />
+</service>

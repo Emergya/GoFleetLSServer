@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="ISO-8859-1" ?>
-
-<configuration>
-  <system/>
-  <properties fileName="jdbc.properties"/>
-  <properties fileName="conf/constants.properties"/>
-</configuration>

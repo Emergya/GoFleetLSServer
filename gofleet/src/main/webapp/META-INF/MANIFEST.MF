@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Implementation-Title: OpenLS
+Implementation-Version: 0.0.1-SNAPSHOT
+Implementation-Vendor-Id: org.gofleet
+Build-Jdk: 1.6.0_26
+Built-By: marias
+Specification-Title: OpenLS
+Created-By: Apache Maven
+Specification-Version: 0.0.1-SNAPSHOT
+
