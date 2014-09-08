@@ -14,7 +14,7 @@
     <import resource="classpath*:/config/*-context.xml"/>
     
 	<context:annotation-config />
-	<context:component-scan base-package="org.gofleet.openLS, org.emergya.osrm" />
+	<context:component-scan base-package="org.gofleet.openLS, org.emergya, com.emergya" />
 
 	<bean id="openLSService" class="org.gofleet.openLS.OpenLS"/>
 	

@@ -64,10 +64,10 @@ public class OpenLS {
 
     static Log LOG = LogFactory.getLog(OpenLS.class);
 
-    @Autowired()
+    @Autowired(required = false)
     RoutingHandler routingHandler;
 
-    @Autowired()
+    @Autowired(required = false)
     GeocodingHandler geocodingHandler;
 
     /**

@@ -79,7 +79,7 @@ public class XLSType
     @XmlElementRef(name = "_Body", namespace = "http://www.opengis.net/xls", type = JAXBElement.class)
     protected List<JAXBElement<? extends AbstractBodyType>> body;
     @XmlAttribute(name = "version", required = true)
-    protected BigDecimal version;
+    protected String version;
     @XmlAttribute(name = "lang", namespace = "http://www.opengis.net/xls")
     @XmlJavaTypeAdapter(CollapsedStringAdapter.class)
     @XmlSchemaType(name = "language")
@@ -149,10 +149,10 @@ public class XLSType
      * 
      * @return
      *     possible object is
-     *     {@link BigDecimal }
+     *     {@link String }
      *     
      */
-    public BigDecimal getVersion() {
+    public String getVersion() {
         return version;
     }
 
@@ -161,10 +161,10 @@ public class XLSType
      * 
      * @param value
      *     allowed object is
-     *     {@link BigDecimal }
+     *     {@link String }
      *     
      */
-    public void setVersion(BigDecimal value) {
+    public void setVersion(String value) {
         this.version = value;
     }
 
@@ -218,7 +218,7 @@ public class XLSType
             strategy.appendField(locator, this, "body", buffer, theBody);
         }
         {
-            BigDecimal theVersion;
+            String theVersion;
             theVersion = this.getVersion();
             strategy.appendField(locator, this, "version", buffer, theVersion);
         }
@@ -257,9 +257,9 @@ public class XLSType
             }
         }
         {
-            BigDecimal lhsVersion;
+            String lhsVersion;
             lhsVersion = this.getVersion();
-            BigDecimal rhsVersion;
+            String rhsVersion;
             rhsVersion = that.getVersion();
             if (!strategy.equals(LocatorUtils.property(thisLocator, "version", lhsVersion), LocatorUtils.property(thatLocator, "version", rhsVersion), lhsVersion, rhsVersion)) {
                 return false;
@@ -295,7 +295,7 @@ public class XLSType
             currentHashCode = strategy.hashCode(LocatorUtils.property(locator, "body", theBody), currentHashCode, theBody);
         }
         {
-            BigDecimal theVersion;
+            String theVersion;
             theVersion = this.getVersion();
             currentHashCode = strategy.hashCode(LocatorUtils.property(locator, "version", theVersion), currentHashCode, theVersion);
         }
@@ -346,9 +346,9 @@ public class XLSType
                 copy.body = null;
             }
             if (this.version!= null) {
-                BigDecimal sourceVersion;
+                String sourceVersion;
                 sourceVersion = this.getVersion();
-                BigDecimal copyVersion = ((BigDecimal) strategy.copy(LocatorUtils.property(locator, "version", sourceVersion), sourceVersion));
+                String copyVersion = ((String) strategy.copy(LocatorUtils.property(locator, "version", sourceVersion), sourceVersion));
                 copy.setVersion(copyVersion);
             } else {
                 copy.version = null;
@@ -396,11 +396,11 @@ public class XLSType
                 uniqueBodyl.addAll(((List<JAXBElement<? extends AbstractBodyType>> ) strategy.merge(LocatorUtils.property(leftLocator, "body", lhsBody), LocatorUtils.property(rightLocator, "body", rhsBody), lhsBody, rhsBody)));
             }
             {
-                BigDecimal lhsVersion;
+                String lhsVersion;
                 lhsVersion = leftObject.getVersion();
-                BigDecimal rhsVersion;
+                String rhsVersion;
                 rhsVersion = rightObject.getVersion();
-                target.setVersion(((BigDecimal) strategy.merge(LocatorUtils.property(leftLocator, "version", lhsVersion), LocatorUtils.property(rightLocator, "version", rhsVersion), lhsVersion, rhsVersion)));
+                target.setVersion(((String) strategy.merge(LocatorUtils.property(leftLocator, "version", lhsVersion), LocatorUtils.property(rightLocator, "version", rhsVersion), lhsVersion, rhsVersion)));
             }
             {
                 String lhsLang;
