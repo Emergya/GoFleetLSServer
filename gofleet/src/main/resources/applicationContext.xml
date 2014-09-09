@@ -18,5 +18,6 @@
 
 	<bean id="openLSService" class="org.gofleet.openLS.OpenLS"/>
 	
+    <context:property-placeholder location="classpath*:openls.properties"/>
 
 </beans>  
