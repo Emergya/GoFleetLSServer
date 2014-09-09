@@ -64,11 +64,11 @@ import org.jvnet.jaxb2_commons.locator.util.LocatorUtils;
  * 
  * 
  */
-@XmlAccessorType(XmlAccessType.FIELD)
+@XmlAccessorType(XmlAccessType.NONE)
 @XmlType(name = "XLSType", propOrder = {
     "header",
     "body"
-})
+}, namespace ="http://www.opengis.net/xls")
 @XmlRootElement(namespace="http://www.opengis.net/xls", name="xls")
 public class XLSType
     implements Cloneable, CopyTo, Equals, HashCode, MergeFrom, ToString
@@ -84,6 +84,16 @@ public class XLSType
     @XmlJavaTypeAdapter(CollapsedStringAdapter.class)
     @XmlSchemaType(name = "language")
     protected String lang;
+    
+     
+    @XmlAttribute(name = "xls", namespace = "http://www.w3.org/2001/10/XMLSchema")
+    protected final String XLS = "http://www.opengis.net/xls";
+    
+    @XmlAttribute(name = "gml", namespace = "http://www.w3.org/2001/10/XMLSchema")
+    protected final String GML = "http://www.opengis.net/gml";
+    
+    @XmlAttribute(name = "xsi", namespace = "http://www.w3.org/2001/10/XMLSchema")
+    protected final String XSI = "http://www.w3.org/2001/XMLSchema-instance";
 
     /**
      * Gets the value of the header property.
@@ -415,6 +425,28 @@ public class XLSType
     public void setBody(List<JAXBElement<? extends AbstractBodyType>> value) {
         List<JAXBElement<? extends AbstractBodyType>> draftl = this.getBody();
         draftl.addAll(value);
+    }
+
+   
+    /**
+     * @return the XLS
+     */
+    public String getXLS() {
+        return XLS;
+    }
+
+    /**
+     * @return the GML
+     */
+    public String getGML() {
+        return GML;
+    }
+
+    /**
+     * @return the XSI
+     */
+    public String getXSI() {
+        return XSI;
     }
 
 }
