@@ -27,12 +27,14 @@ import net.opengis.xls.v_1_2_0.GeocodeRequestType;
 import net.opengis.xls.v_1_2_0.RequestType;
 import net.opengis.xls.v_1_2_0.ReverseGeocodeRequestType;
 import net.opengis.xls.v_1_2_0.XLSType;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.gofleet.openLS.handlers.GeocodingHandler;
 import org.gofleet.openLS.handlers.RoutingHandler;
 import org.gofleet.openLS.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 import org.xml.sax.SAXException;
@@ -69,6 +71,9 @@ public class OpenLS {
 
     @Autowired(required = false)
     GeocodingHandler geocodingHandler;
+    
+    @Value("${org.gofleet.openLS.locale}")
+    private String defaultLocale;
 
     /**
      * Stupid test to see if the Server is alive.
@@ -100,6 +105,8 @@ public class OpenLS {
             if (parameter.getLang() != null && !parameter.getLang().isEmpty()) {
                 LOG.trace("Language detected: " + parameter.getLang());
                 localetmp = new Locale(parameter.getLang());
+            } else if(!StringUtils.isEmpty(defaultLocale)) {
+                localetmp = new Locale(defaultLocale);
             }
             final Locale locale = localetmp;
             localetmp = null;
