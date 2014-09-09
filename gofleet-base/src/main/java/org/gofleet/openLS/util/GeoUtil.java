@@ -1,7 +1,5 @@
 package org.gofleet.openLS.util;
 
-import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -12,10 +10,8 @@ import net.opengis.gml.v_3_1_1.LinearRingType;
 import net.opengis.gml.v_3_1_1.PointType;
 import net.opengis.gml.v_3_1_1.PolygonType;
 import net.opengis.xls.v_1_2_0.AddressType;
-import net.opengis.xls.v_1_2_0.NamedPlaceClassification;
 import net.opengis.xls.v_1_2_0.NamedPlaceType;
 import net.opengis.xls.v_1_2_0.PositionType;
-import net.opengis.xls.v_1_2_0.StreetAddressType;
 import net.opengis.xls.v_1_2_0.StreetNameType;
 import net.opengis.xls.v_1_2_0.WayPointType;
 

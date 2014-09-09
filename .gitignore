@@ -9,3 +9,4 @@ target/
 *.bak
 *.orig
 **/nb-configuration.xml
+/gofleet/catalog.xml

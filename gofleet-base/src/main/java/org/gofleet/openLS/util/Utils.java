@@ -64,7 +64,7 @@ public class Utils {
 			List<List<AbstractResponseParametersType>> params, Locale locale) {
 		XLSType xlsType = new XLSType();
 		xlsType.setVersion("1.2.0");
-
+        
 		ResponseType responseType = new ResponseType();
 
 		for (List<AbstractResponseParametersType> element : params) {
@@ -102,7 +102,7 @@ public class Utils {
 		JAXBElement<XLSType> res = new JAXBElement<XLSType>(new QName(
 				"http://www.opengis.net/xls", "xls", "xls"), XLSType.class,
 				xlsType);
-		return res;
+        return res;
 	}
 
 	/**
