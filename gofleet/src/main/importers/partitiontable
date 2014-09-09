@@ -1,0 +1,65 @@
+#Partition table for routing based on the source point of every line
+#Partition by latitude/longitude
+
+#DO NOT TRUSTE ME
+#YOU HEAR ME?? DO *NOT* EVER NEVER WHATEVER TRUST THIS SCRIPT!!!
+#It is a bad filthy stupid boring shitty script which you should *NOT* trust
+#Never
+#You are warned
+#Now, do not cry to me when this blows up your database and kills your cat
+#Not my problem
+
+#Trust me, you have agreed to worse software contracts
+
+#What did I told you? Do not trust me
+
+#Meh, your call.
+
+#Customize this:
+host=localhost
+user=gofleetls
+database=gofleetls
+
+#From/to coordinates
+x=35
+y=395
+max_x=40
+max_y=420
+
+trigger="CREATE OR REPLACE FUNCTION routing_insert_trigger()
+RETURNS TRIGGER AS \$\$
+BEGIN
+"
+
+
+while (("$x" <= "$max_x")); do
+    y=34
+    while(("$y" <= "$max_y")); do  
+	    echo "routing_partition_$x$y"
+            psql -h $host -U $user $database -c "DROP TABLE IF EXISTS routing_partition_$x$y CASCADE;"
+            psql -h $host -U $user -c "CREATE TABLE routing_partition_$x$y (CHECK (abs(x1)*10 >= $x - 1 AND abs(y1)*10 >= $y - 1 AND abs(x1)*10 < $x AND abs(y1)*10 < $y)) INHERITS (routing);" $database
+            psql -h $host -U $user -c "ALTER TABLE routing_partition_$x$y ADD CONSTRAINT routing_partition_id_$x$y PRIMARY KEY (id);" $database
+            psql -h $host -U $user -c "CREATE INDEX routing_partition_source_$x$y ON routing_partition_$x$y (source);" $database
+            psql -h $host -U $user -c "CREATE INDEX routing_partition_target_$x$y ON routing_partition_$x$y (target);" $database
+            trigger=$trigger"
+IF ( abs(NEW.x1*10) < $x AND abs(NEW.y1*10) < $y AND abs(NEW.x1*10) >= $x - 1 AND abs(NEW.y1*10) >= $y -1) THEN
+    INSERT INTO routing_partition_$x$y VALUES (NEW.*);
+END IF;"
+      let "y++"
+    done
+  let "x++"
+done
+
+trigger=$trigger"
+RETURN NULL;
+END;
+\$\$
+LANGUAGE plpgsql;"
+
+echo $trigger
+
+psql -h $host -U $user -c "$trigger" $database
+psql -h $host -U $user -c "CREATE TRIGGER insert_routing_trigger BEFORE INSERT ON routing FOR EACH ROW EXECUTE PROCEDURE routing_insert_trigger();" $database
+
+
+echo "Done"

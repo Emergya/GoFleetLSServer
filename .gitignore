@@ -4,3 +4,9 @@ target/
 .metadata
 .project
 /.externalToolBuilders
+**/pom.xml.versionsBackup
+*~
+*.bak
+*.orig
+**/nb-configuration.xml
+/gofleet/catalog.xml

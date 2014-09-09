@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<XLS version="1.1" xmlns="http://www.opengis.net/xls" xmlns:gml="http://www.opengis.net/gml"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.opengis.net/xls">
+	<RequestHeader />
+	<Request methodName="RouteRequest" version="1.1" requestID="rte1">
+		<DetermineRouteRequest>
+			<RoutePlan>
+				<RoutePreference>Fastest</RoutePreference>
+				<WayPointList>
+					<StartPoint>
+						<Position>
+							<gml:Point>
+								<gml:pos>-5.917055 37.394202</gml:pos>
+							</gml:Point>
+						</Position>
+					</StartPoint>
+
+					<ViaPoint>
+						<Position>
+							<gml:Point>
+								<gml:pos>-5.906652 37.394202</gml:pos>
+							</gml:Point>
+						</Position>
+					</ViaPoint>
+
+					<EndPoint>
+						<Position>
+							<gml:Point>
+								<gml:pos>-5.916507 37.394331</gml:pos>
+							</gml:Point>
+						</Position>
+					</EndPoint>
+				</WayPointList>
+			</RoutePlan>
+			<RouteInstructionsRequest format="text/plain"
+				provideGeometry="false" />
+			<RouteGeometryRequest />
+			<RouteMapRequest>
+				<Output format="png8" height="400" width="400" />
+			</RouteMapRequest>
+		</DetermineRouteRequest>
+	</Request>
+
+</XLS>
