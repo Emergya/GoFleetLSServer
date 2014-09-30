@@ -35,5 +35,5 @@ import net.opengis.xls.v_1_2_0.DetermineRouteResponseType;
  * @author lroman
  */
 public interface RoutingHandler {
-    DetermineRouteResponseType routePlan(final DetermineRouteRequestType param);
+    DetermineRouteResponseType routePlan(final DetermineRouteRequestType param, int maxResponses);
 }

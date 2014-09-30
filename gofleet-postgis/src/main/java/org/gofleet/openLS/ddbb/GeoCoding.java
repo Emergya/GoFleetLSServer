@@ -50,19 +50,19 @@ public class GeoCoding implements GeocodingHandler {
 
     @Override
 	public List<AbstractResponseParametersType> directory(
-			DirectoryRequestType param) {
+			DirectoryRequestType param, int maxResponses) {
 		return dao.directory(param);
 	}
 
     @Override
 	public List<AbstractResponseParametersType> reverseGeocode(
-			ReverseGeocodeRequestType param) {
+			ReverseGeocodeRequestType param, int maxResponses) {
 		return dao.reverseGeocode(param);
 	}
 
     @Override
 	public List<AbstractResponseParametersType> geocoding(
-			GeocodeRequestType param) {
+			GeocodeRequestType param, int maxResponses) {
 		return dao.geocoding(param);
 	}
 

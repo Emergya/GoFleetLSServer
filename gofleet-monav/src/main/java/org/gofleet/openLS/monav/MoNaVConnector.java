@@ -101,7 +101,7 @@ public class MoNaVConnector implements RoutingHandler{
 	 */
     @Override
 	public DetermineRouteResponseType routePlan(
-			DetermineRouteRequestType param)  {
+			DetermineRouteRequestType param, int maxResponses)  {
 		DetermineRouteResponseType res = new DetermineRouteResponseType();
 		Double cost = null;
 		String cmd = "/opt/monav/bin/daemon-test /var/www/monav/routing_yes/";

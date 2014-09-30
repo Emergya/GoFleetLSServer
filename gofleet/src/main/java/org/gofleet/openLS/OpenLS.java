@@ -71,7 +71,7 @@ public class OpenLS {
 
     @Autowired(required = false)
     GeocodingHandler geocodingHandler;
-    
+
     @Value("${org.gofleet.openLS.locale}")
     private String defaultLocale;
 
@@ -105,9 +105,10 @@ public class OpenLS {
             if (parameter.getLang() != null && !parameter.getLang().isEmpty()) {
                 LOG.trace("Language detected: " + parameter.getLang());
                 localetmp = new Locale(parameter.getLang());
-            } else if(!StringUtils.isEmpty(defaultLocale)) {
+            } else if (!StringUtils.isEmpty(defaultLocale)) {
                 localetmp = new Locale(defaultLocale);
             }
+
             final Locale locale = localetmp;
             localetmp = null;
             final List<List<AbstractResponseParametersType>> resultado = new LinkedList<List<AbstractResponseParametersType>>();
@@ -119,9 +120,24 @@ public class OpenLS {
                 AbstractBodyType body = jaxbbody.getValue();
 
                 if (body instanceof RequestType) {
+                    RequestType requestWrapper = ((RequestType) body);
 
-                    final AbstractRequestParametersType request = ((RequestType) body)
-                            .getRequestParameters().getValue();
+                    final int maxResponses;
+
+                    if (requestWrapper.getMaximumResponses() == null) {
+                        maxResponses = 10;
+                    } else {
+
+                        int auxResponses = requestWrapper.getMaximumResponses().intValue();
+
+                        if (auxResponses <= 0) {
+                            auxResponses = 10;
+                        }
+
+                        maxResponses = auxResponses;
+                    }
+
+                    final AbstractRequestParametersType request = requestWrapper.getRequestParameters().getValue();
 
                     FutureTask<List<AbstractResponseParametersType>> thread = new FutureTask<List<AbstractResponseParametersType>>(
                             new Callable<List<AbstractResponseParametersType>>() {
@@ -132,15 +148,13 @@ public class OpenLS {
 
                                     try {
                                         if (request instanceof DetermineRouteRequestType) {
-                                            response = routePlan(
-                                                    (DetermineRouteRequestType) request,
-                                                    locale);
+                                            response = routePlan((DetermineRouteRequestType) request, locale, maxResponses);
                                         } else if (request instanceof ReverseGeocodeRequestType) {
-                                            response = reverseGeocoding((ReverseGeocodeRequestType) request);
+                                            response = reverseGeocoding((ReverseGeocodeRequestType) request, maxResponses);
                                         } else if (request instanceof GeocodeRequestType) {
-                                            response = geocoding((GeocodeRequestType) request);
+                                            response = geocoding((GeocodeRequestType) request, maxResponses);
                                         } else if (request instanceof DirectoryRequestType) {
-                                            response = directory((DirectoryRequestType) request);
+                                            response = directory((DirectoryRequestType) request, maxResponses);
                                         }
 
                                         synchronized (resultado) {
@@ -182,7 +196,7 @@ public class OpenLS {
      * @return
      */
     protected List<AbstractResponseParametersType> routePlan(
-            DetermineRouteRequestType param, Locale locale) {
+            DetermineRouteRequestType param, Locale locale, int maxResponses) {
 
         List<AbstractResponseParametersType> list = new LinkedList<AbstractResponseParametersType>();
         AbstractResponseParametersType arpt = null;
@@ -192,7 +206,7 @@ public class OpenLS {
         }
 
         try {
-            arpt = routingHandler.routePlan(param);
+            arpt = routingHandler.routePlan(param, maxResponses);
         } catch (Throwable t) {
             LOG.error("Error on routePlan", t);
         }
@@ -207,13 +221,13 @@ public class OpenLS {
      * @return
      */
     protected List<AbstractResponseParametersType> reverseGeocoding(
-            ReverseGeocodeRequestType request) {
+            ReverseGeocodeRequestType request, int maxResponses) {
 
         if (geocodingHandler == null) {
             throw new IllegalArgumentException("ReverseGeocoding requests not supported by the server.");
         }
 
-        return geocodingHandler.reverseGeocode(request);
+        return geocodingHandler.reverseGeocode(request, maxResponses);
     }
 
     /**
@@ -223,12 +237,12 @@ public class OpenLS {
      * @return
      */
     protected List<AbstractResponseParametersType> directory(
-            DirectoryRequestType param) {
+            DirectoryRequestType param, int maxResponses) {
 
         if (geocodingHandler == null) {
             throw new IllegalArgumentException("ReverseGeocoding requests not supported by the server.");
         }
-        return geocodingHandler.directory(param);
+        return geocodingHandler.directory(param, maxResponses);
     }
 
     /**
@@ -243,11 +257,11 @@ public class OpenLS {
      * @throws JAXBException
      */
     protected List<AbstractResponseParametersType> geocoding(
-            GeocodeRequestType request) {
+            GeocodeRequestType request, int maxResponses) {
         if (geocodingHandler == null) {
             throw new IllegalArgumentException("ReverseGeocoding requests not supported by the server.");
         }
-        return geocodingHandler.geocoding(request);
+        return geocodingHandler.geocoding(request, maxResponses);
     }
 
 }
