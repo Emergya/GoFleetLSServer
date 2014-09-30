@@ -38,9 +38,9 @@ import net.opengis.xls.v_1_2_0.ReverseGeocodeRequestType;
  * @author lroman
  */
 public interface GeocodingHandler {
-    List<AbstractResponseParametersType> directory(DirectoryRequestType param);
+    List<AbstractResponseParametersType> directory(DirectoryRequestType param, int maxResponses);
 
-    List<AbstractResponseParametersType> geocoding(final GeocodeRequestType param);
+    List<AbstractResponseParametersType> geocoding(final GeocodeRequestType param, int maxResponses);
 
-    List<AbstractResponseParametersType> reverseGeocode(final ReverseGeocodeRequestType param);
+    List<AbstractResponseParametersType> reverseGeocode(final ReverseGeocodeRequestType param, int maxResponses);
 }
