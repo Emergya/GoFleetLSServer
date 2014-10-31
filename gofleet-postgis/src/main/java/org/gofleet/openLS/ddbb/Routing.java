@@ -27,13 +27,10 @@ package org.gofleet.openLS.ddbb;
  * This exception does not however invalidate any other reasons why the
  * executable file might be covered by the GNU General Public License.
  */
-import javax.annotation.Resource;
-
-import net.opengis.xls.v_1_2_0.DetermineRouteRequestType;
-import net.opengis.xls.v_1_2_0.DetermineRouteResponseType;
-
 import org.gofleet.openLS.ddbb.dao.postgis.PostGisHBRoutingDAO;
 import org.gofleet.openLS.handlers.RoutingHandler;
+import org.jvnet.ogc.DetermineRouteRequestType;
+import org.jvnet.ogc.DetermineRouteResponseType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -43,9 +40,9 @@ public class Routing implements RoutingHandler {
 	@Autowired
 	private PostGisHBRoutingDAO dao;
 
-    @Override
+	@Override
 	public DetermineRouteResponseType routePlan(
-			DetermineRouteRequestType param) {
+			DetermineRouteRequestType param, int maxResponses) {
 		return dao.routePlan(param);
 	}
 }

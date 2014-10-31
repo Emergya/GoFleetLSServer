@@ -35,27 +35,28 @@ import java.sql.SQLException;
 import java.util.LinkedList;
 import java.util.List;
 
-import net.opengis.xls.v_1_2_0.AbstractResponseParametersType;
-import net.opengis.xls.v_1_2_0.AddressType;
-import net.opengis.xls.v_1_2_0.DirectoryRequestType;
-import net.opengis.xls.v_1_2_0.GeocodeRequestType;
-import net.opengis.xls.v_1_2_0.GeocodeResponseListType;
-import net.opengis.xls.v_1_2_0.GeocodeResponseType;
-import net.opengis.xls.v_1_2_0.GeocodedAddressType;
-import net.opengis.xls.v_1_2_0.NamedPlaceClassification;
-import net.opengis.xls.v_1_2_0.NamedPlaceType;
-import net.opengis.xls.v_1_2_0.PositionType;
-import net.opengis.xls.v_1_2_0.ReverseGeocodeRequestType;
-import net.opengis.xls.v_1_2_0.ReverseGeocodeResponseType;
-import net.opengis.xls.v_1_2_0.ReverseGeocodedLocationType;
-import net.opengis.xls.v_1_2_0.StreetAddressType;
-import net.opengis.xls.v_1_2_0.StreetNameType;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.gofleet.openLS.ddbb.dao.HibernateDAOBase;
+import org.gofleet.openLS.ddbb.utils.PostGisUtils;
 import org.gofleet.openLS.util.GeoUtil;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
+import org.jvnet.ogc.AbstractResponseParametersType;
+import org.jvnet.ogc.AddressType;
+import org.jvnet.ogc.DirectoryRequestType;
+import org.jvnet.ogc.GeocodeRequestType;
+import org.jvnet.ogc.GeocodeResponseListType;
+import org.jvnet.ogc.GeocodeResponseType;
+import org.jvnet.ogc.GeocodedAddressType;
+import org.jvnet.ogc.NamedPlaceClassification;
+import org.jvnet.ogc.NamedPlaceType;
+import org.jvnet.ogc.PositionType;
+import org.jvnet.ogc.ReverseGeocodeRequestType;
+import org.jvnet.ogc.ReverseGeocodeResponseType;
+import org.jvnet.ogc.ReverseGeocodedLocationType;
+import org.jvnet.ogc.StreetAddressType;
+import org.jvnet.ogc.StreetNameType;
 import org.postgis.PGgeometry;
 import org.postgresql.jdbc4.Jdbc4Array;
 import org.springframework.orm.hibernate3.HibernateCallback;
@@ -63,8 +64,6 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.vividsolutions.jts.geom.Geometry;
-import org.gofleet.openLS.ddbb.dao.HibernateDAOBase;
-import org.gofleet.openLS.ddbb.utils.PostGisUtils;
 
 @Repository
 public class PostGisHBGeoCodingDAO extends HibernateDAOBase {

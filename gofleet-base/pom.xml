@@ -4,7 +4,7 @@
     
     <parent>
         <groupId>org.gofleet</groupId>        
-        <version>2.0.0-SNAPSHOT</version>
+        <version>3.0.0-SNAPSHOT</version>
         <artifactId>gofleet-parent</artifactId>
     </parent>    
     <artifactId>gofleet-base</artifactId>
@@ -36,8 +36,8 @@
         <!-- OpenLS classes -->
         <dependency>
             <groupId>org.jvnet.ogc</groupId>
-            <artifactId>ols-v_1_2_0-schema</artifactId>
-            <version>1.0.3</version>
+            <artifactId>ols-v_1_3_0-schema</artifactId>
+            <version>0.1.1</version>
         </dependency>
         <dependency>
             <groupId>org.jvnet.ogc</groupId>
@@ -125,6 +125,11 @@
             <id>Emergya Nexus</id>
             <name>Emergya Nexus</name>
             <url>http://nexus.emergya.es/nexus/content/groups/public/</url>
+        </repository>
+        <repository>
+            <id>GoFleet Nexus</id>
+            <name>GoFleet Nexus</name>
+            <url>http://nexus.emergya.es/nexus/content/groups/GoFleet/</url>
         </repository>
         <repository>
             <id>maven2-repository.dev.java.net</id>

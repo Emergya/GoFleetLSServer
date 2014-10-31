@@ -5,15 +5,13 @@ import java.io.FileNotFoundException;
 import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
 
-import net.opengis.xls.v_1_2_0.XLSType;
-
 import org.gofleet.openLS.OpenLS;
 import org.gofleet.openLS.util.Utils;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.jvnet.ogc.XLSType;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.annotation.Repeat;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 

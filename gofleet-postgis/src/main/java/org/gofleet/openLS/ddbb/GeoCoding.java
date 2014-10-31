@@ -29,16 +29,13 @@ package org.gofleet.openLS.ddbb;
  */
 import java.util.List;
 
-import javax.annotation.Resource;
-
-import net.opengis.xls.v_1_2_0.AbstractResponseParametersType;
-import net.opengis.xls.v_1_2_0.DirectoryRequestType;
-import net.opengis.xls.v_1_2_0.GeocodeRequestType;
-import net.opengis.xls.v_1_2_0.ReverseGeocodeRequestType;
-
 import org.apache.commons.lang3.StringUtils;
 import org.gofleet.openLS.ddbb.dao.postgis.PostGisHBGeoCodingDAO;
 import org.gofleet.openLS.handlers.GeocodingHandler;
+import org.jvnet.ogc.AbstractResponseParametersType;
+import org.jvnet.ogc.DirectoryRequestType;
+import org.jvnet.ogc.GeocodeRequestType;
+import org.jvnet.ogc.ReverseGeocodeRequestType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

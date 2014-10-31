@@ -1,7 +1,6 @@
 package org.gofleet.openLS.util;
 
 import java.io.FileNotFoundException;
-import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Locale;
@@ -12,14 +11,13 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.namespace.QName;
 
-import net.opengis.xls.v_1_2_0.AbstractResponseParametersType;
-import net.opengis.xls.v_1_2_0.ResponseHeaderType;
-import net.opengis.xls.v_1_2_0.ResponseType;
-import net.opengis.xls.v_1_2_0.XLSType;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jvnet.ogc.AbstractResponseParametersType;
+import org.jvnet.ogc.ResponseHeaderType;
+import org.jvnet.ogc.ResponseType;
+import org.jvnet.ogc.XLSType;
 
 /*
  * Copyright (C) 2011, Emergya (http://www.emergya.es)
