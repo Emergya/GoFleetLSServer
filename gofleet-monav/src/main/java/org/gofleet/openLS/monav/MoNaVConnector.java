@@ -41,26 +41,26 @@ import javax.xml.bind.Unmarshaller;
 import javax.xml.namespace.QName;
 
 import net.opengis.gml.v_3_1_1.DirectPositionListType;
-import net.opengis.gml.v_3_1_1.LineStringType;
-import net.opengis.xls.v_1_2_0.DetermineRouteRequestType;
-import net.opengis.xls.v_1_2_0.DetermineRouteResponseType;
-import net.opengis.xls.v_1_2_0.RouteGeometryType;
-import net.opengis.xls.v_1_2_0.RouteHandleType;
-import net.opengis.xls.v_1_2_0.RouteInstructionsListType;
-import net.opengis.xls.v_1_2_0.RouteMapType;
-import net.opengis.xls.v_1_2_0.RouteSummaryType;
-import net.opengis.xls.v_1_2_0.WayPointListType;
-import net.opengis.xls.v_1_2_0.WayPointType;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.gofleet.openLS.handlers.RoutingHandler;
+import org.gofleet.openLS.util.GeoUtil;
+import org.jvnet.ogc.DetermineRouteRequestType;
+import org.jvnet.ogc.DetermineRouteResponseType;
+import org.jvnet.ogc.LineStringType;
+import org.jvnet.ogc.RouteGeometryType;
+import org.jvnet.ogc.RouteHandleType;
+import org.jvnet.ogc.RouteInstructionsListType;
+import org.jvnet.ogc.RouteMapType;
+import org.jvnet.ogc.RouteSummaryType;
+import org.jvnet.ogc.WayPointListType;
+import org.jvnet.ogc.WayPointType;
+import org.springframework.stereotype.Service;
 
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.io.ParseException;
-import org.gofleet.openLS.handlers.RoutingHandler;
-import org.gofleet.openLS.util.GeoUtil;
-import org.springframework.stereotype.Service;
 
 /**
  * @author marias
@@ -176,12 +176,10 @@ public class MoNaVConnector implements RoutingHandler{
 
 		try {
 
-			lst.setPosOrPointPropertyOrPointRep(list);
 			routeGeometry.setLineString(lst);
 			res.setRouteGeometry(routeGeometry);
 			res.setRouteHandle(new RouteHandleType());
 			res.setRouteInstructionsList(new RouteInstructionsListType());
-			res.setRouteMap(new LinkedList<RouteMapType>());
 			res.setRouteSummary(new RouteSummaryType());
 		} catch (Throwable t) {
 			LOG.error("Error generating route response: " + t, t);

@@ -2,16 +2,17 @@ package org.gofleet.openLS.ddbb.utils;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
-import net.opengis.gml.v_3_1_1.DirectPositionType;
-import net.opengis.gml.v_3_1_1.PointType;
-import net.opengis.xls.v_1_2_0.AddressType;
-import net.opengis.xls.v_1_2_0.NamedPlaceClassification;
-import net.opengis.xls.v_1_2_0.NamedPlaceType;
-import net.opengis.xls.v_1_2_0.StreetAddressType;
-import net.opengis.xls.v_1_2_0.StreetNameType;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jvnet.ogc.AddressType;
+import org.jvnet.ogc.DirectPositionType;
+import org.jvnet.ogc.NamedPlaceClassification;
+import org.jvnet.ogc.NamedPlaceType;
+import org.jvnet.ogc.PointType;
+import org.jvnet.ogc.StreetAddressType;
+import org.jvnet.ogc.StreetNameType;
 import org.postgis.PGgeometry;
 import org.postgis.Point;
 import org.postgresql.jdbc4.Jdbc4Array;
@@ -31,8 +32,9 @@ public abstract class PostGisUtils {
         list.add(center.getY());
         PointType point = new PointType();
         DirectPositionType pos = new DirectPositionType();
-        pos.setValue(list);
-        point.setPos(pos);
+        // TODO
+        //pos.setValue(list);
+        //point.setPos(pos);
         return point;
     }
 

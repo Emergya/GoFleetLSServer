@@ -27,8 +27,8 @@
  */
 package org.gofleet.openLS.handlers;
 
-import net.opengis.xls.v_1_2_0.DetermineRouteRequestType;
-import net.opengis.xls.v_1_2_0.DetermineRouteResponseType;
+import org.jvnet.ogc.DetermineRouteRequestType;
+import org.jvnet.ogc.DetermineRouteResponseType;
 
 /**
  *

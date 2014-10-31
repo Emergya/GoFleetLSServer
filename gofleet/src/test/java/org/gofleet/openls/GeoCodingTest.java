@@ -27,31 +27,33 @@ package org.gofleet.openls;
  * This exception does not however invalidate any other reasons why the
  * executable file might be covered by the GNU General Public License.
  */
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.FileNotFoundException;
 import java.util.List;
+
 import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
 import javax.xml.stream.FactoryConfigurationError;
 import javax.xml.stream.XMLStreamException;
-import net.opengis.xls.v_1_2_0.AbstractBodyType;
-import net.opengis.xls.v_1_2_0.AbstractResponseParametersType;
-import net.opengis.xls.v_1_2_0.AddressType;
-import net.opengis.xls.v_1_2_0.GeocodeResponseListType;
-import net.opengis.xls.v_1_2_0.GeocodeResponseType;
-import net.opengis.xls.v_1_2_0.GeocodedAddressType;
-import net.opengis.xls.v_1_2_0.ResponseType;
-import net.opengis.xls.v_1_2_0.ReverseGeocodeResponseType;
-import net.opengis.xls.v_1_2_0.ReverseGeocodedLocationType;
-import net.opengis.xls.v_1_2_0.XLSType;
+
 import org.gofleet.openLS.OpenLS;
 import org.gofleet.openLS.handlers.GeocodingHandler;
 import org.gofleet.openLS.util.Utils;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.jvnet.ogc.AbstractBodyType;
+import org.jvnet.ogc.AbstractResponseParametersType;
+import org.jvnet.ogc.AddressType;
+import org.jvnet.ogc.GeocodeResponseListType;
+import org.jvnet.ogc.GeocodeResponseType;
+import org.jvnet.ogc.GeocodedAddressType;
+import org.jvnet.ogc.ResponseType;
+import org.jvnet.ogc.ReverseGeocodeResponseType;
+import org.jvnet.ogc.ReverseGeocodedLocationType;
+import org.jvnet.ogc.XLSType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;

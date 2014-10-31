@@ -3,25 +3,27 @@ package org.gofleet.openLS.util;
 import java.util.LinkedList;
 import java.util.List;
 
-import net.opengis.gml.v_3_1_1.AbstractRingPropertyType;
 import net.opengis.gml.v_3_1_1.CoordType;
-import net.opengis.gml.v_3_1_1.DirectPositionType;
-import net.opengis.gml.v_3_1_1.LinearRingType;
-import net.opengis.gml.v_3_1_1.PointType;
-import net.opengis.gml.v_3_1_1.PolygonType;
-import net.opengis.xls.v_1_2_0.AddressType;
-import net.opengis.xls.v_1_2_0.NamedPlaceType;
-import net.opengis.xls.v_1_2_0.PositionType;
-import net.opengis.xls.v_1_2_0.StreetNameType;
-import net.opengis.xls.v_1_2_0.WayPointType;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.geotools.geometry.jts.JTS;
 import org.geotools.referencing.CRS;
+import org.jvnet.ogc.AbstractRingPropertyType;
+import org.jvnet.ogc.AbstractRingType;
+import org.jvnet.ogc.AddressType;
+import org.jvnet.ogc.DirectPositionType;
+import org.jvnet.ogc.LinearRingType;
+import org.jvnet.ogc.NamedPlaceType;
+import org.jvnet.ogc.PointType;
+import org.jvnet.ogc.PolygonType;
+import org.jvnet.ogc.PositionType;
+import org.jvnet.ogc.StreetNameType;
+import org.jvnet.ogc.WayPointType;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opengis.referencing.operation.MathTransform;
+
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -217,11 +219,11 @@ public class GeoUtil {
 		Geometry g = null;
 
 		if (position.getPoint() != null) {
-			if (position.getPoint().getCoord() != null
-					&& position.getPoint().getCoord().getX() != null) {
+			if (position.getPoint().getPos() != null
+					&& position.getPoint().getPos().getValue() != null) {
 				g = geomFact.createPoint(new Coordinate(position.getPoint()
-						.getCoord().getX().doubleValue(), position.getPoint()
-						.getCoord().getY().doubleValue()));
+						.getPos().getValue().get(0).doubleValue(), position.getPoint()
+						.getPos().getValue().get(1).doubleValue()));
 			} else if (position.getPoint().getPos() != null
 					&& position.getPoint().getPos().getValue() != null
 					&& position.getPoint().getPos().getValue().size() == 2) {
@@ -238,13 +240,13 @@ public class GeoUtil {
 			LinearRing[] holes = interiorRings.toArray(new LinearRing[] {});
 
 			List<Coordinate> coordinateList = new LinkedList<Coordinate>();
-			AbstractRingPropertyType exterior = polygon.getExterior()
-					.getValue();
+			AbstractRingPropertyType exterior = polygon.getExterior();
 			LinearRingType ring = (LinearRingType) exterior.getRing()
 					.getValue();
-			for (CoordType coord : ring.getCoord()) {
-				coordinateList.add(new Coordinate(coord.getX().doubleValue(),
-						coord.getY().doubleValue()));
+			
+			for (DirectPositionType coord : ring.getPos()) {
+				coordinateList.add(new Coordinate(coord.getValue().get(0).doubleValue(),
+						coord.getValue().get(1).doubleValue()));
 			}
 			Coordinate[] coordinates = coordinateList
 					.toArray(new Coordinate[] {});

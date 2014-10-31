@@ -39,10 +39,9 @@ import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 
-import net.opengis.xls.v_1_2_0.DetermineRouteResponseType;
-import net.opengis.xls.v_1_2_0.XLSType;
-
 import org.junit.Test;
+import org.jvnet.ogc.DetermineRouteResponseType;
+import org.jvnet.ogc.XLSType;
 
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -113,7 +112,6 @@ public class OpenLSClientTest {
 
 		assertNotNull(determineRoute.getRouteGeometry().getLineString());
 
-		assertTrue(determineRoute.getRouteGeometry().getLineString()
-				.getPosList().getValue().size() > 0);
+		assertTrue(determineRoute.getRouteGeometry().getLineString().getPos().size() > 0);
 	}
 }

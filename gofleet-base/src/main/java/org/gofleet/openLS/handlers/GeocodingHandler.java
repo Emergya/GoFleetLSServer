@@ -28,10 +28,11 @@
 package org.gofleet.openLS.handlers;
 
 import java.util.List;
-import net.opengis.xls.v_1_2_0.AbstractResponseParametersType;
-import net.opengis.xls.v_1_2_0.DirectoryRequestType;
-import net.opengis.xls.v_1_2_0.GeocodeRequestType;
-import net.opengis.xls.v_1_2_0.ReverseGeocodeRequestType;
+
+import org.jvnet.ogc.AbstractResponseParametersType;
+import org.jvnet.ogc.DirectoryRequestType;
+import org.jvnet.ogc.GeocodeRequestType;
+import org.jvnet.ogc.ReverseGeocodeRequestType;
 
 /**
  *

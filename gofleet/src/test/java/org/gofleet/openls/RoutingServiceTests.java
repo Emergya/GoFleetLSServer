@@ -13,12 +13,6 @@ import javax.xml.stream.FactoryConfigurationError;
 import javax.xml.stream.XMLStreamException;
 
 import net.opengis.gml.v_3_1_1.DirectPositionListType;
-import net.opengis.xls.v_1_2_0.AbstractBodyType;
-import net.opengis.xls.v_1_2_0.AbstractResponseParametersType;
-import net.opengis.xls.v_1_2_0.DetermineRouteResponseType;
-import net.opengis.xls.v_1_2_0.ResponseType;
-import net.opengis.xls.v_1_2_0.RouteGeometryType;
-import net.opengis.xls.v_1_2_0.XLSType;
 
 import org.geotools.geometry.jts.JTS;
 import org.geotools.referencing.CRS;
@@ -26,6 +20,13 @@ import org.gofleet.openLS.OpenLS;
 import org.gofleet.openLS.util.Utils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.jvnet.ogc.AbstractBodyType;
+import org.jvnet.ogc.AbstractResponseParametersType;
+import org.jvnet.ogc.DetermineRouteResponseType;
+import org.jvnet.ogc.DirectPositionType;
+import org.jvnet.ogc.ResponseType;
+import org.jvnet.ogc.RouteGeometryType;
+import org.jvnet.ogc.XLSType;
 import org.opengis.geometry.MismatchedDimensionException;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
@@ -101,14 +102,15 @@ public class RoutingServiceTests {
 
 		assertNotNull("There should be a linestring",
 				routeGeometry.getLineString());
+		
 
-		List<JAXBElement<?>> posOrPointPropertyOrPointRep = routeGeometry
-				.getLineString().getPosOrPointPropertyOrPointRep();
+		List<DirectPositionType> posOrPointPropertyOrPointRep = routeGeometry
+				.getLineString().getPos();
 
 		assertNotNull("There should be a list of positions",
 				posOrPointPropertyOrPointRep);
 
-		for (JAXBElement<?> element : posOrPointPropertyOrPointRep) {
+		for (DirectPositionType element : posOrPointPropertyOrPointRep) {
 			assertNotNull(element);
 			o = element.getValue();
 			assertNotNull(o);

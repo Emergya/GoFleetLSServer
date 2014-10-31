@@ -27,14 +27,6 @@
  */
 package org.gofleet.openLS.ddbb.dao.postgis;
 
-import com.vividsolutions.jts.geom.Coordinate;
-import com.vividsolutions.jts.geom.CoordinateSequence;
-import com.vividsolutions.jts.geom.Geometry;
-import com.vividsolutions.jts.geom.GeometryFactory;
-import com.vividsolutions.jts.geom.LineString;
-import com.vividsolutions.jts.geom.impl.CoordinateArraySequence;
-import com.vividsolutions.jts.io.ParseException;
-import com.vividsolutions.jts.io.WKTReader;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.math.BigDecimal;
@@ -43,22 +35,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
-import net.opengis.gml.v_3_1_1.LineStringType;
-import net.opengis.xls.v_1_2_0.DetermineRouteRequestType;
-import net.opengis.xls.v_1_2_0.DetermineRouteResponseType;
-import net.opengis.xls.v_1_2_0.DistanceType;
-import net.opengis.xls.v_1_2_0.RouteGeometryType;
-import net.opengis.xls.v_1_2_0.RouteHandleType;
-import net.opengis.xls.v_1_2_0.RouteInstructionsListType;
-import net.opengis.xls.v_1_2_0.RouteMapType;
-import net.opengis.xls.v_1_2_0.RouteSummaryType;
-import net.opengis.xls.v_1_2_0.WayPointListType;
-import net.opengis.xls.v_1_2_0.WayPointType;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.gofleet.openLS.ddbb.bean.HBA;
@@ -68,10 +51,30 @@ import org.hibernate.HibernateException;
 import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernatespatial.GeometryUserType;
+import org.jvnet.ogc.DetermineRouteRequestType;
+import org.jvnet.ogc.DetermineRouteResponseType;
+import org.jvnet.ogc.DistanceType;
+import org.jvnet.ogc.LineStringType;
+import org.jvnet.ogc.RouteGeometryType;
+import org.jvnet.ogc.RouteHandleType;
+import org.jvnet.ogc.RouteInstructionsListType;
+import org.jvnet.ogc.RouteMapType;
+import org.jvnet.ogc.RouteSummaryType;
+import org.jvnet.ogc.WayPointListType;
+import org.jvnet.ogc.WayPointType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.orm.hibernate3.HibernateCallback;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.CoordinateSequence;
+import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.geom.GeometryFactory;
+import com.vividsolutions.jts.geom.LineString;
+import com.vividsolutions.jts.geom.impl.CoordinateArraySequence;
+import com.vividsolutions.jts.io.ParseException;
+import com.vividsolutions.jts.io.WKTReader;
 
 @Repository
 public class PostGisHBRoutingDAO extends HibernateDAOBase {
@@ -232,7 +235,6 @@ public class PostGisHBRoutingDAO extends HibernateDAOBase {
 
 		res.setRouteHandle(getRouteHandle(coords));
 		res.setRouteInstructionsList(getInstructionsList(coords));
-		res.setRouteMap(getRouteMap(coords));
 		res.setRouteSummary(getRouteSummary(cost));
 		return res;
 	}

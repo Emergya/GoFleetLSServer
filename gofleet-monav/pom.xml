@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.gofleet</groupId>        
-        <version>2.0.0-SNAPSHOT</version>
+        <version>3.0.0-SNAPSHOT</version>
         <artifactId>gofleet-parent</artifactId>
     </parent>    
     <artifactId>gofleet-monav</artifactId>

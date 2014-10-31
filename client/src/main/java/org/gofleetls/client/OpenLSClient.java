@@ -39,27 +39,28 @@ import javax.xml.bind.Unmarshaller;
 import javax.xml.namespace.QName;
 
 import net.opengis.gml.v_3_1_1.CoordType;
-import net.opengis.gml.v_3_1_1.DirectPositionType;
-import net.opengis.gml.v_3_1_1.PointType;
-import net.opengis.xls.v_1_2_0.AbstractBodyType;
-import net.opengis.xls.v_1_2_0.AbstractLocationType;
-import net.opengis.xls.v_1_2_0.AbstractResponseParametersType;
-import net.opengis.xls.v_1_2_0.DetermineRouteRequestType;
-import net.opengis.xls.v_1_2_0.DetermineRouteResponseType;
-import net.opengis.xls.v_1_2_0.DistanceUnitType;
-import net.opengis.xls.v_1_2_0.PositionType;
-import net.opengis.xls.v_1_2_0.RequestHeaderType;
-import net.opengis.xls.v_1_2_0.RequestType;
-import net.opengis.xls.v_1_2_0.ResponseType;
-import net.opengis.xls.v_1_2_0.RouteGeometryRequestType;
-import net.opengis.xls.v_1_2_0.RouteHandleType;
-import net.opengis.xls.v_1_2_0.RouteInstructionsRequestType;
-import net.opengis.xls.v_1_2_0.RouteMapRequestType;
-import net.opengis.xls.v_1_2_0.RoutePlanType;
-import net.opengis.xls.v_1_2_0.RoutePreferenceType;
-import net.opengis.xls.v_1_2_0.WayPointListType;
-import net.opengis.xls.v_1_2_0.WayPointType;
-import net.opengis.xls.v_1_2_0.XLSType;
+
+import org.jvnet.ogc.AbstractBodyType;
+import org.jvnet.ogc.AbstractLocationType;
+import org.jvnet.ogc.AbstractResponseParametersType;
+import org.jvnet.ogc.DetermineRouteRequestType;
+import org.jvnet.ogc.DetermineRouteResponseType;
+import org.jvnet.ogc.DirectPositionType;
+import org.jvnet.ogc.DistanceUnitType;
+import org.jvnet.ogc.PointType;
+import org.jvnet.ogc.PositionType;
+import org.jvnet.ogc.RequestHeaderType;
+import org.jvnet.ogc.RequestType;
+import org.jvnet.ogc.ResponseType;
+import org.jvnet.ogc.RouteGeometryRequestType;
+import org.jvnet.ogc.RouteHandleType;
+import org.jvnet.ogc.RouteInstructionsRequestType;
+import org.jvnet.ogc.RouteMapRequestType;
+import org.jvnet.ogc.RoutePlanType;
+import org.jvnet.ogc.RoutePreferenceType;
+import org.jvnet.ogc.WayPointListType;
+import org.jvnet.ogc.WayPointType;
+import org.jvnet.ogc.XLSType;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.GenericType;
@@ -248,18 +249,15 @@ public class OpenLSClient {
 
 		PointType p = new PointType();
 
-		p.setSrsDimension(BG_2);
 		p.setSrsName("EPSG:" + point.getSRID());
 		CoordType coordType = new CoordType();
 		coordType.setX(BigDecimal.valueOf(point.getX()));
 		coordType.setY(BigDecimal.valueOf(point.getY()));
-		p.setCoord(coordType);
+		
 		DirectPositionType directPositionType = new DirectPositionType();
-		directPositionType.setSrsDimension(BG_2);
 		List<Double> doubles = new LinkedList<Double>();
 		doubles.add(point.getX());
 		doubles.add(point.getY());
-		directPositionType.setValue(doubles);
 		p.setPos(directPositionType);
 
 		position.setPoint(p);
