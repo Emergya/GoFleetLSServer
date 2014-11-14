@@ -45,7 +45,7 @@ public class Routing implements RoutingHandler {
 
     @Override
 	public DetermineRouteResponseType routePlan(
-			DetermineRouteRequestType param) {
+			DetermineRouteRequestType param, int maxResponse) {
 		return dao.routePlan(param);
 	}
 }
